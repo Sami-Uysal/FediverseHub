@@ -6,6 +6,10 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
+import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
@@ -21,6 +25,7 @@ import kotlinx.coroutines.flow.update
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val mastodonRepository: MastodonRepository,
+    private val lemmyRepository: LemmyRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MockFediverseData.homeState)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -32,6 +37,17 @@ class HomeViewModel @Inject constructor(
             )
             .map { pagingData ->
                 pagingData.map(MastodonTimelineMapper::domainToUi)
+            }
+            .cachedIn(viewModelScope)
+
+    val lemmyPosts: Flow<PagingData<LemmyPostUiModel>> =
+        lemmyRepository
+            .getPostsPagingData(
+                account = _uiState.value.accounts.first { it.platform == PlatformType.LEMMY },
+                sort = LemmySortType.HOT,
+            )
+            .map { pagingData ->
+                pagingData.map(LemmyPostMapper::domainToUi)
             }
             .cachedIn(viewModelScope)
 

@@ -2,8 +2,8 @@ package com.samiuysal.fediversehub.feature.home
 
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
-import com.samiuysal.fediversehub.feature.lemmy.CommentUiModel
-import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
+import com.samiuysal.fediversehub.feature.lemmy.data.mock.MockLemmyData
+import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
 import com.samiuysal.fediversehub.feature.mastodon.data.mock.MockMastodonData
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
@@ -42,51 +42,7 @@ object MockFediverseData {
     val homeState = HomeUiState(
         accounts = accounts,
         mastodonPosts = MockMastodonData.homeTimeline.map(MastodonTimelineMapper::domainToUi),
-        lemmyPosts = listOf(
-            LemmyPostUiModel(
-                id = "l1",
-                title = "What is the cleanest way to cache multiple Fediverse account feeds?",
-                community = "androiddev",
-                domain = "self.lemmy.world",
-                author = "u/cache-first",
-                timeAgo = "14m",
-                score = 284,
-                comments = 73,
-                previewText = "I am comparing per-account RemoteKeys vs per-feed RemoteKeys for mixed Mastodon, Lemmy and Pixelfed clients.",
-                nestedComments = listOf(
-                    CommentUiModel("c1", null, "room_mediator", "Keep the remote key scoped by accountId + platform + feed type.", 0, false),
-                    CommentUiModel("c2", "c1", "pagingfan", "This also makes refresh invalidation much less surprising.", 1, false),
-                    CommentUiModel("c3", null, "api_edge", "Do not let Lemmy sort modes share the same cache namespace.", 0, false),
-                ),
-            ),
-            LemmyPostUiModel(
-                id = "l2",
-                title = "Show HN: A Compose comment tree using flattened rows",
-                community = "programming",
-                domain = "github.com",
-                author = "u/compose_tree",
-                timeAgo = "1h",
-                score = 146,
-                comments = 29,
-                previewText = "The tree renders as a LazyColumn with depth metadata and local collapse state.",
-                nestedComments = listOf(
-                    CommentUiModel("c4", null, "lazy_keys", "Flattening is the right default for large trees.", 0, false),
-                    CommentUiModel("c5", "c4", "state_holder", "Collapse state can live by comment id in the ViewModel.", 1, true),
-                ),
-            ),
-            LemmyPostUiModel(
-                id = "l3",
-                title = "Sync-style dense cards still feel better for link-heavy communities",
-                community = "fediverse",
-                domain = "blog.example.dev",
-                author = "u/fedi_reader",
-                timeAgo = "3h",
-                score = 91,
-                comments = 18,
-                previewText = "Card hierarchy matters: title first, source second, metrics always scannable.",
-                nestedComments = emptyList(),
-            ),
-        ),
+        lemmyPosts = MockLemmyData.posts.map(LemmyPostMapper::domainToUi),
         pixelfedPosts = listOf(
             PixelfedPostUiModel(
                 id = "p1",

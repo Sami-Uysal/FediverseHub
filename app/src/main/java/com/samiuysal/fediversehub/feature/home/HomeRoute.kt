@@ -21,6 +21,7 @@ fun HomeRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
+    val lemmyPosts = viewModel.lemmyPosts.collectAsLazyPagingItems()
 
     Column(
         modifier = Modifier
@@ -41,7 +42,7 @@ fun HomeRoute(
             )
             PlatformType.LEMMY -> LemmyHomeScreen(
                 account = uiState.selectedAccount,
-                posts = uiState.lemmyPosts,
+                posts = lemmyPosts,
                 modifier = Modifier.weight(1f),
             )
             PlatformType.PIXELFED -> PixelfedHomeScreen(
