@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.lemmy.LemmyHomeScreen
 import com.samiuysal.fediversehub.feature.mastodon.MastodonHomeScreen
@@ -19,6 +20,7 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
 
     Column(
         modifier = Modifier
@@ -34,7 +36,7 @@ fun HomeRoute(
         when (uiState.selectedPlatform) {
             PlatformType.MASTODON -> MastodonHomeScreen(
                 account = uiState.selectedAccount,
-                posts = uiState.mastodonPosts,
+                posts = mastodonTimeline,
                 modifier = Modifier.weight(1f),
             )
             PlatformType.LEMMY -> LemmyHomeScreen(
