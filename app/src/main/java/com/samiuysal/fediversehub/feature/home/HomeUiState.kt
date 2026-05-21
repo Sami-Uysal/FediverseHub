@@ -11,6 +11,8 @@ import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
 data class HomeUiState(
     val selectedPlatform: PlatformType = PlatformType.MASTODON,
     val accounts: List<Account> = emptyList(),
+    val isMastodonLoading: Boolean = false,
+    val mastodonErrorMessage: String? = null,
     val mastodonPosts: List<MastodonPostUiModel> = emptyList(),
     val lemmyPosts: List<LemmyPostUiModel> = emptyList(),
     val pixelfedPosts: List<PixelfedPostUiModel> = emptyList(),

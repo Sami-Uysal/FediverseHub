@@ -4,7 +4,8 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.lemmy.CommentUiModel
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
-import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
+import com.samiuysal.fediversehub.feature.mastodon.data.mock.MockMastodonData
+import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
 
 object MockFediverseData {
@@ -40,44 +41,7 @@ object MockFediverseData {
 
     val homeState = HomeUiState(
         accounts = accounts,
-        mastodonPosts = listOf(
-            MastodonPostUiModel(
-                id = "m1",
-                displayName = "Nora Dev",
-                username = "@nora@hachyderm.io",
-                avatarUrl = "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop",
-                timeAgo = "8m",
-                content = "Compose feed performansında en büyük kazanç stable UI model + LazyColumn key kombinasyonundan geliyor. Bugün timeline cache katmanını RemoteMediator'a hazırladım.",
-                mediaUrl = null,
-                replies = 12,
-                boosts = 28,
-                favourites = 91,
-            ),
-            MastodonPostUiModel(
-                id = "m2",
-                displayName = "Moshidon Labs",
-                username = "@labs@fosstodon.org",
-                avatarUrl = null,
-                timeAgo = "31m",
-                content = "A unified Fediverse client should still respect platform grammar. Timeline is not a post board, and a photo grid is not a tweet list.",
-                mediaUrl = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=900&h=520&fit=crop",
-                replies = 5,
-                boosts = 44,
-                favourites = 130,
-            ),
-            MastodonPostUiModel(
-                id = "m3",
-                displayName = "Android Weekly",
-                username = "@androidweekly@mastodon.social",
-                avatarUrl = "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=120&h=120&fit=crop",
-                timeAgo = "1h",
-                content = "Material 3 works best when product teams add a clear component layer instead of sprinkling raw Material calls across every feature.",
-                mediaUrl = null,
-                replies = 18,
-                boosts = 61,
-                favourites = 204,
-            ),
-        ),
+        mastodonPosts = MockMastodonData.homeTimeline.map(MastodonTimelineMapper::domainToUi),
         lemmyPosts = listOf(
             LemmyPostUiModel(
                 id = "l1",
