@@ -249,6 +249,16 @@ private fun MastodonTimelinePost(post: MastodonPostUiModel) {
             ),
         )
     }
+    val linkPreview = remember(post.linkPreview) {
+        post.linkPreview?.let {
+            AppLinkPreview(
+                domain = it.domain,
+                title = it.title,
+                description = it.description,
+                thumbnailUrl = it.thumbnailUrl,
+            )
+        }
+    }
 
     AppPostCard(
         displayName = post.displayName,
@@ -262,14 +272,7 @@ private fun MastodonTimelinePost(post: MastodonPostUiModel) {
         boostedByAvatarUrl = post.boostedByAvatarUrl,
         replyContext = post.replyContext,
         showThreadLine = post.showThreadLine,
-        linkPreview = post.linkPreview?.let {
-            AppLinkPreview(
-                domain = it.domain,
-                title = it.title,
-                description = it.description,
-                thumbnailUrl = it.thumbnailUrl,
-            )
-        },
+        linkPreview = linkPreview,
         actions = actions,
     )
 }

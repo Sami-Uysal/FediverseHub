@@ -1,9 +1,5 @@
 package com.samiuysal.fediversehub.core.designsystem.component
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -13,11 +9,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -48,30 +41,18 @@ fun AppPostActionsRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         actions.forEach { action ->
-            val interactionSource = remember(action.contentDescription) { MutableInteractionSource() }
-            val pressed by interactionSource.collectIsPressedAsState()
-            val scale by animateFloatAsState(
-                targetValue = if (pressed) 0.9f else 1f,
-                label = "postActionScale",
-            )
-            val tint by animateColorAsState(
-                targetValue = if (action.isHighlighted || pressed) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                label = "postActionTint",
-            )
+            val tint = if (action.isHighlighted) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.xxs),
             ) {
                 IconButton(
                     onClick = action.onClick,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .scale(scale),
-                    interactionSource = interactionSource,
+                    modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
                         imageVector = action.icon,

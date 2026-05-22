@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.size.Precision
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
@@ -70,6 +71,7 @@ fun AppPostCard(
     modifier: Modifier = Modifier,
     onMoreClick: () -> Unit = {},
 ) {
+    val metaText = remember(username, timeAgo) { "  $username · $timeAgo" }
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.background,
@@ -109,7 +111,7 @@ fun AppPostCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = "  $username · $timeAgo",
+                            text = metaText,
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -147,7 +149,7 @@ fun AppPostCard(
                         Spacer(Modifier.height(AppSpacing.sm))
                         AppMediaPreview(
                             mediaUrl = mediaUrl,
-                            contentDescription = content,
+                            contentDescription = "Post media",
                             hasAltText = hasAltText,
                         )
                     }
@@ -303,6 +305,7 @@ private fun LinkPreviewThumbnail(
                 ImageRequest.Builder(context)
                     .data(thumbnailUrl)
                     .size(208, 176)
+                    .precision(Precision.INEXACT)
                     .crossfade(false)
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.ENABLED)

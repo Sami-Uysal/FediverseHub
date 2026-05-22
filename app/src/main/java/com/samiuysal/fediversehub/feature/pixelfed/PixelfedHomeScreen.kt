@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.size.Precision
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppCard
 import com.samiuysal.fediversehub.core.designsystem.component.AppIconButton
@@ -320,6 +321,7 @@ private fun PixelfedImage(
         ImageRequest.Builder(context)
             .data(imageUrl)
             .size(900, 900)
+            .precision(Precision.INEXACT)
             .crossfade(false)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)

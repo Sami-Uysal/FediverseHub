@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.size.Precision
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
@@ -47,7 +48,8 @@ fun AppMediaPreview(
             val request = remember(context, mediaUrl) {
                 ImageRequest.Builder(context)
                     .data(mediaUrl)
-                    .size(720, 420)
+                    .size(640, 372)
+                    .precision(Precision.INEXACT)
                     .crossfade(false)
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.ENABLED)
