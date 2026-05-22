@@ -1,8 +1,10 @@
 package com.samiuysal.fediversehub.feature.auth.data
 
 import android.net.Uri
+import androidx.room.withTransaction
 import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
+import com.samiuysal.fediversehub.core.database.AppDatabase
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
 class MastodonAuthRepositoryImpl @Inject constructor(
     private val mastodonApi: MastodonApi,
     private val accountStore: AccountStore,
+    private val database: AppDatabase,
 ) : MastodonAuthRepository {
     override val accounts: Flow<List<Account>> = accountStore.accounts
 
@@ -100,6 +103,11 @@ class MastodonAuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(accountId: String): AppResult<Unit> = runCatching {
         accountStore.removeAccount(accountId)
+        database.withTransaction {
+            val mastodonTimelineDao = database.mastodonTimelineDao()
+            mastodonTimelineDao.clearRemoteKey(accountId)
+            mastodonTimelineDao.clearTimeline(accountId)
+        }
         AppResult.Success(Unit)
     }.getOrElse { throwable ->
         AppResult.Failure(AppError.Unknown(throwable.message))

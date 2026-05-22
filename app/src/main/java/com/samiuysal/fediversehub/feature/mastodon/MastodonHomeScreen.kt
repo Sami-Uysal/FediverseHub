@@ -63,8 +63,10 @@ fun MastodonHomeScreen(
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
 ) {
-    val isRefreshing by remember(posts) {
-        derivedStateOf { posts.loadState.refresh is LoadState.Loading }
+    val isInitialLoading by remember(posts) {
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0
+        }
     }
     val refreshError by remember(posts) {
         derivedStateOf { posts.loadState.refresh as? LoadState.Error }
@@ -84,8 +86,8 @@ fun MastodonHomeScreen(
         }
 
         when {
-            isRefreshing -> MastodonTimelineSkeleton()
-            refreshError != null -> AppErrorState(
+            isInitialLoading -> MastodonTimelineSkeleton()
+            refreshError != null && posts.itemCount == 0 -> AppErrorState(
                 message = refreshError?.error.timelineMessage(),
                 onRetry = posts::retry,
             )
