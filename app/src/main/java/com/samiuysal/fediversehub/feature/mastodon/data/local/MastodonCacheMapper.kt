@@ -28,6 +28,7 @@ object MastodonCacheMapper {
             accountId = account.id,
             instanceUrl = account.instanceUrl,
             remoteId = dto.id,
+            statusRemoteId = status.id,
             uri = status.uri,
             url = status.url,
             createdAt = status.createdAt,
@@ -70,6 +71,7 @@ object MastodonCacheMapper {
         val post = value.post
         return MastodonPost(
             id = post.remoteId,
+            detailId = post.statusRemoteId,
             authorDisplayName = post.authorDisplayName,
             authorUsername = post.authorUsername,
             authorAvatarUrl = post.authorAvatarUrl,

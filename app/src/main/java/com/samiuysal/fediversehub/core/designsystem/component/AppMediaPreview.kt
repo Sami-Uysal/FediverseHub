@@ -1,5 +1,6 @@
 package com.samiuysal.fediversehub.core.designsystem.component
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -26,6 +28,13 @@ import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 
+@Immutable
+data class AppMediaItem(
+    val previewUrl: String?,
+    val fullUrl: String?,
+    val altText: String?,
+)
+
 @Composable
 fun AppMediaPreview(
     mediaUrl: String?,
@@ -34,6 +43,28 @@ fun AppMediaPreview(
     hasAltText: Boolean = false,
 ) {
     if (mediaUrl == null) return
+    AppMediaPreview(
+        mediaItems = listOf(
+            AppMediaItem(
+                previewUrl = mediaUrl,
+                fullUrl = mediaUrl,
+                altText = if (hasAltText) "ALT" else null,
+            ),
+        ),
+        modifier = modifier,
+        contentDescription = contentDescription,
+    )
+}
+
+@Composable
+fun AppMediaPreview(
+    mediaItems: List<AppMediaItem>,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    onMediaClick: (Int) -> Unit = {},
+) {
+    if (mediaItems.isEmpty()) return
+    val item = mediaItems.first()
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
 
@@ -42,13 +73,14 @@ fun AppMediaPreview(
             .fillMaxWidth()
             .aspectRatio(1.72f)
             .clip(RoundedCornerShape(AppRadius.md))
+            .clickable { onMediaClick(0) }
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        if (!isPreview) {
-            val request = remember(context, mediaUrl) {
+        if (!isPreview && item.previewUrl != null) {
+            val request = remember(context, item.previewUrl) {
                 ImageRequest.Builder(context)
-                    .data(mediaUrl)
-                    .size(640, 372)
+                    .data(item.previewUrl)
+                    .size(520, 304)
                     .precision(Precision.INEXACT)
                     .crossfade(false)
                     .memoryCachePolicy(CachePolicy.ENABLED)
@@ -62,7 +94,23 @@ fun AppMediaPreview(
                 contentScale = ContentScale.Crop,
             )
         }
-        if (hasAltText) {
+        if (mediaItems.size > 1) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(AppSpacing.sm),
+                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.76f),
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(AppRadius.sm),
+            ) {
+                Text(
+                    text = "+${mediaItems.size - 1}",
+                    modifier = Modifier.padding(horizontal = AppSpacing.xs, vertical = AppSpacing.xxs),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+        if (!item.altText.isNullOrBlank()) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomStart)

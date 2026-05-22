@@ -16,6 +16,7 @@ data class MastodonPostEntity(
     val accountId: String,
     val instanceUrl: String,
     val remoteId: String,
+    val statusRemoteId: String,
     val uri: String?,
     val url: String?,
     val createdAt: String?,

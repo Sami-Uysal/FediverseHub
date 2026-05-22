@@ -2,6 +2,8 @@ package com.samiuysal.fediversehub.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.samiuysal.fediversehub.core.database.AppDatabase
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonTimelineDao
 import dagger.Module
@@ -23,6 +25,7 @@ object DatabaseModule {
         AppDatabase::class.java,
         "fediversehub.db",
     )
+        .addMigrations(MIGRATION_2_3)
         .fallbackToDestructiveMigration(true)
         .build()
 
@@ -30,4 +33,11 @@ object DatabaseModule {
     fun provideMastodonTimelineDao(
         database: AppDatabase,
     ): MastodonTimelineDao = database.mastodonTimelineDao()
+
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE mastodon_posts ADD COLUMN statusRemoteId TEXT NOT NULL DEFAULT ''")
+            db.execSQL("UPDATE mastodon_posts SET statusRemoteId = remoteId WHERE statusRemoteId = ''")
+        }
+    }
 }

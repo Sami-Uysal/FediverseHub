@@ -28,6 +28,11 @@ class SwitchingMastodonRepository @Inject constructor(
     ): AppResult<List<MastodonPost>> =
         account.repository().getHomeTimeline(account, page)
 
+    override suspend fun getPostDetail(
+        account: Account,
+        postId: String,
+    ) = account.repository().getPostDetail(account, postId)
+
     private fun Account.repository(): MastodonRepository =
         if (accessToken.isNullOrBlank()) mockRepository else realRepository
 }

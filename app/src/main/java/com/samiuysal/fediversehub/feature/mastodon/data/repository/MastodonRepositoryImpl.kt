@@ -15,6 +15,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonTimelineDa
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonApi
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonTimelineRemoteMediator
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
@@ -64,6 +65,36 @@ class MastodonRepositoryImpl @Inject constructor(
                 page = page,
             ).map(MastodonTimelineMapper::dtoToDomain)
             AppResult.Success(posts)
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getPostDetail(
+        account: Account,
+        postId: String,
+    ): AppResult<MastodonPostDetail> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val post = mastodonApi.getStatus(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+                statusId = postId,
+            )
+            val context = mastodonApi.getStatusContext(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+                statusId = postId,
+            )
+            AppResult.Success(
+                MastodonPostDetail(
+                    post = MastodonTimelineMapper.dtoToDomain(post),
+                    ancestors = context.ancestors.map(MastodonTimelineMapper::dtoToDomain),
+                    descendants = context.descendants.map(MastodonTimelineMapper::dtoToDomain),
+                ),
+            )
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }

@@ -38,6 +38,8 @@ import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreen
 @Composable
 fun HomeRoute(
     contentPadding: PaddingValues,
+    onMastodonPostSelected: (String) -> Unit,
+    onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -53,6 +55,8 @@ fun HomeRoute(
                 posts = mastodonTimeline,
                 modifier = modifier,
                 showTopBar = false,
+                onPostClick = onMastodonPostSelected,
+                onMediaClick = onMastodonMediaSelected,
             )
         },
         lemmyContent = { modifier ->

@@ -2,6 +2,7 @@ package com.samiuysal.fediversehub.feature.mastodon.domain
 
 data class MastodonPost(
     val id: String,
+    val detailId: String = id,
     val authorDisplayName: String,
     val authorUsername: String,
     val authorAvatarUrl: String?,
@@ -39,4 +40,10 @@ data class MastodonLinkPreview(
     val title: String,
     val description: String?,
     val thumbnailUrl: String?,
+)
+
+data class MastodonPostDetail(
+    val post: MastodonPost,
+    val ancestors: List<MastodonPost>,
+    val descendants: List<MastodonPost>,
 )

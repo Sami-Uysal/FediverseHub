@@ -3,6 +3,7 @@ package com.samiuysal.fediversehub.feature.mastodon.data.remote
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 
@@ -34,4 +35,16 @@ interface MastodonApi {
         accessToken: String,
         page: MastodonTimelinePage = MastodonTimelinePage(),
     ): List<MastodonStatusDto>
+
+    suspend fun getStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun getStatusContext(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonContextDto
 }

@@ -44,6 +44,7 @@ import com.samiuysal.fediversehub.core.common.error.AppErrorException
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppLinkPreview
+import com.samiuysal.fediversehub.core.designsystem.component.AppMediaItem
 import com.samiuysal.fediversehub.core.designsystem.component.AppPostAction
 import com.samiuysal.fediversehub.core.designsystem.component.AppPostCard
 import com.samiuysal.fediversehub.core.designsystem.component.AppCompactLinkPreview
@@ -62,6 +63,8 @@ fun MastodonHomeScreen(
     posts: LazyPagingItems<MastodonPostUiModel>,
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
+    onPostClick: (String) -> Unit = {},
+    onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
 ) {
     val isInitialLoading by remember(posts) {
         derivedStateOf {
@@ -95,7 +98,11 @@ fun MastodonHomeScreen(
                 title = "No posts yet",
                 message = "Your Mastodon timeline will appear here after refresh.",
             )
-            else -> MastodonTimelineList(posts = posts)
+            else -> MastodonTimelineList(
+                posts = posts,
+                onPostClick = onPostClick,
+                onMediaClick = onMediaClick,
+            )
         }
     }
 }
@@ -110,6 +117,8 @@ fun MastodonHomeScreenContent(
     onRetry: () -> Unit = {},
     onRefresh: () -> Unit = {},
     showTopBar: Boolean = true,
+    onPostClick: (String) -> Unit = {},
+    onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
 ) {
     Column(modifier = modifier) {
         if (showTopBar) {
@@ -128,7 +137,11 @@ fun MastodonHomeScreenContent(
                 title = "No posts yet",
                 message = "Your Mastodon timeline will appear here after refresh.",
             )
-            else -> MastodonTimelineList(posts = posts)
+            else -> MastodonTimelineList(
+                posts = posts,
+                onPostClick = onPostClick,
+                onMediaClick = onMediaClick,
+            )
         }
     }
 }
@@ -163,13 +176,15 @@ private fun MastodonTopBar(
 @Composable
 private fun MastodonTimelineList(
     posts: List<MastodonPostUiModel>,
+    onPostClick: (String) -> Unit,
+    onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
-            start = AppSpacing.lg,
+            start = 0.dp,
             top = 0.dp,
-            end = AppSpacing.lg,
+            end = 0.dp,
             bottom = AppSpacing.xl,
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -179,7 +194,11 @@ private fun MastodonTimelineList(
             key = { it.id },
             contentType = { "mastodon-post" },
         ) { post ->
-            MastodonTimelinePost(post = post)
+            MastodonTimelinePost(
+                post = post,
+                onClick = { onPostClick(post.detailId) },
+                onMediaClick = onMediaClick,
+            )
         }
     }
 }
@@ -187,13 +206,15 @@ private fun MastodonTimelineList(
 @Composable
 private fun MastodonTimelineList(
     posts: LazyPagingItems<MastodonPostUiModel>,
+    onPostClick: (String) -> Unit,
+    onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
-            start = AppSpacing.lg,
+            start = 0.dp,
             top = 0.dp,
-            end = AppSpacing.lg,
+            end = 0.dp,
             bottom = AppSpacing.xl,
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -207,7 +228,11 @@ private fun MastodonTimelineList(
             if (post == null) {
                 MastodonPostSkeleton()
             } else {
-                MastodonTimelinePost(post = post)
+                MastodonTimelinePost(
+                    post = post,
+                    onClick = { onPostClick(post.detailId) },
+                    onMediaClick = onMediaClick,
+                )
             }
         }
 
@@ -231,7 +256,11 @@ private fun MastodonTimelineList(
 }
 
 @Composable
-private fun MastodonTimelinePost(post: MastodonPostUiModel) {
+private fun MastodonTimelinePost(
+    post: MastodonPostUiModel,
+    onClick: () -> Unit = {},
+    onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
+) {
     val actions = remember(post.replies, post.boosts, post.favourites) {
         listOf(
             AppPostAction(
@@ -261,6 +290,23 @@ private fun MastodonTimelinePost(post: MastodonPostUiModel) {
             )
         }
     }
+    val mediaItems = remember(post.media) {
+        post.media.map {
+            AppMediaItem(
+                previewUrl = it.previewUrl,
+                fullUrl = it.fullUrl,
+                altText = it.altText,
+            )
+        }
+    }
+    val mediaNavigationItems = remember(post.media) {
+        post.media.mapNotNull { media ->
+            val url = media.fullUrl ?: media.previewUrl
+            url?.let { it to !media.altText.isNullOrBlank() }
+        }
+    }
+    val mediaUrls = remember(mediaNavigationItems) { mediaNavigationItems.map { it.first } }
+    val mediaHasAlt = remember(mediaNavigationItems) { mediaNavigationItems.map { it.second } }
 
     AppPostCard(
         displayName = post.displayName,
@@ -269,6 +315,7 @@ private fun MastodonTimelinePost(post: MastodonPostUiModel) {
         avatarUrl = post.avatarUrl,
         content = post.content,
         mediaUrl = post.mediaUrl,
+        mediaItems = mediaItems,
         hasAltText = post.hasAltText,
         boostedByDisplayName = post.boostedByDisplayName,
         boostedByAvatarUrl = post.boostedByAvatarUrl,
@@ -276,6 +323,12 @@ private fun MastodonTimelinePost(post: MastodonPostUiModel) {
         showThreadLine = post.showThreadLine,
         linkPreview = linkPreview,
         actions = actions,
+        onClick = onClick,
+        onMediaClick = { index ->
+            if (mediaUrls.isNotEmpty()) {
+                onMediaClick(mediaUrls, mediaHasAlt, index.coerceIn(mediaUrls.indices))
+            }
+        },
     )
 }
 

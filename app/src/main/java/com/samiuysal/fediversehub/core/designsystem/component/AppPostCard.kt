@@ -1,14 +1,18 @@
 package com.samiuysal.fediversehub.core.designsystem.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -61,20 +65,52 @@ fun AppPostCard(
     avatarUrl: String?,
     content: String,
     mediaUrl: String?,
+    mediaItems: List<AppMediaItem> = emptyList(),
     hasAltText: Boolean = false,
     boostedByDisplayName: String? = null,
     boostedByAvatarUrl: String? = null,
     replyContext: String? = null,
     showThreadLine: Boolean = false,
+    threadLineTop: Boolean = false,
+    threadLineBottom: Boolean = showThreadLine,
+    threadIndentLevel: Int = 0,
+    isThreadFocused: Boolean = false,
     linkPreview: AppLinkPreview? = null,
     actions: List<AppPostAction>,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    onMediaClick: (Int) -> Unit = {},
     onMoreClick: () -> Unit = {},
 ) {
     val metaText = remember(username, timeAgo) { "  $username · $timeAgo" }
+    val visibleMedia = remember(mediaItems, mediaUrl, hasAltText) {
+        if (mediaItems.isNotEmpty()) {
+            mediaItems
+        } else if (mediaUrl != null) {
+            listOf(AppMediaItem(mediaUrl, mediaUrl, if (hasAltText) "ALT" else null))
+        } else {
+            emptyList()
+        }
+    }
+    val boundedIndent = threadIndentLevel.coerceIn(0, 2)
+    val startPadding = AppSpacing.md + (boundedIndent * 10).dp
+    val containerColor = if (isThreadFocused) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+    val hasThreadConnection = threadLineTop || threadLineBottom
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                },
+            ),
+        color = containerColor,
     ) {
         Column {
             if (boostedByDisplayName != null) {
@@ -86,16 +122,22 @@ fun AppPostCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
                     .padding(
-                        horizontal = AppSpacing.lg,
-                        vertical = if (boostedByDisplayName == null) AppSpacing.md else AppSpacing.sm,
+                        start = startPadding,
+                        end = AppSpacing.md,
+                        top = if (boostedByDisplayName == null) AppSpacing.md else AppSpacing.sm,
+                        bottom = if (boostedByDisplayName == null) AppSpacing.md else AppSpacing.sm,
                     ),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
             ) {
                 ThreadAvatarColumn(
                     avatarUrl = avatarUrl,
                     displayName = displayName,
-                    showThreadLine = showThreadLine,
+                    showThreadLineTop = threadLineTop,
+                    showThreadLineBottom = threadLineBottom,
+                    showThreadMarker = hasThreadConnection,
+                    modifier = Modifier.fillMaxHeight(),
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -145,12 +187,12 @@ fun AppPostCard(
                         Spacer(Modifier.height(AppSpacing.sm))
                         AppCompactLinkPreview(linkPreview = linkPreview)
                     }
-                    if (mediaUrl != null) {
+                    if (visibleMedia.isNotEmpty()) {
                         Spacer(Modifier.height(AppSpacing.sm))
                         AppMediaPreview(
-                            mediaUrl = mediaUrl,
+                            mediaItems = visibleMedia,
                             contentDescription = "Post media",
-                            hasAltText = hasAltText,
+                            onMediaClick = onMediaClick,
                         )
                     }
                     Spacer(Modifier.height(AppSpacing.sm))
@@ -175,7 +217,7 @@ private fun BoostedByRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 22.dp, top = AppSpacing.sm, end = AppSpacing.lg),
+            .padding(start = 14.dp, top = AppSpacing.sm, end = AppSpacing.md),
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -205,29 +247,63 @@ private fun BoostedByRow(
 private fun ThreadAvatarColumn(
     avatarUrl: String?,
     displayName: String,
-    showThreadLine: Boolean,
+    showThreadLineTop: Boolean,
+    showThreadLineBottom: Boolean,
+    showThreadMarker: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        modifier = modifier.width(42.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
+        if (showThreadLineTop) {
+            ThreadLine(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .height(16.dp),
+            )
+        }
+        if (showThreadLineBottom) {
+            ThreadLine(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 46.dp)
+                    .fillMaxHeight(),
+            )
+        }
         AppAvatar(
             imageUrl = avatarUrl,
             name = displayName,
             size = 42.dp,
+            modifier = Modifier.align(Alignment.TopCenter),
         )
-        if (showThreadLine) {
+        if (showThreadMarker) {
             Box(
                 modifier = Modifier
-                    .padding(top = AppSpacing.xs)
-                    .width(2.dp)
-                    .height(108.dp)
+                    .align(Alignment.TopCenter)
+                    .offset(y = 50.dp)
+                    .size(8.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.82f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
                         shape = RoundedCornerShape(AppRadius.full),
                     ),
             )
         }
     }
+}
+
+@Composable
+private fun ThreadLine(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .width(2.dp)
+            .background(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.76f),
+                shape = RoundedCornerShape(AppRadius.full),
+            ),
+    )
 }
 
 @Composable

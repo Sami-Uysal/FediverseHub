@@ -5,12 +5,14 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class MastodonPostUiModel(
     val id: String,
+    val detailId: String = id,
     val displayName: String,
     val username: String,
     val avatarUrl: String?,
     val timeAgo: String,
     val content: String,
     val mediaUrl: String?,
+    val media: List<MastodonMediaUiModel> = emptyList(),
     val hasAltText: Boolean = false,
     val boostedByDisplayName: String? = null,
     val boostedByAvatarUrl: String? = null,
@@ -20,6 +22,14 @@ data class MastodonPostUiModel(
     val replies: Int,
     val boosts: Int,
     val favourites: Int,
+)
+
+@Immutable
+data class MastodonMediaUiModel(
+    val id: String,
+    val previewUrl: String?,
+    val fullUrl: String?,
+    val altText: String?,
 )
 
 @Immutable

@@ -14,4 +14,9 @@ interface MastodonRepository {
         account: Account,
         page: MastodonTimelinePage = MastodonTimelinePage(),
     ): AppResult<List<MastodonPost>>
+
+    suspend fun getPostDetail(
+        account: Account,
+        postId: String,
+    ): AppResult<MastodonPostDetail>
 }

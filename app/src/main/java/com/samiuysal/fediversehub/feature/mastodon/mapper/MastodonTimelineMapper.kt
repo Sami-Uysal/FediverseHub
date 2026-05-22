@@ -3,6 +3,7 @@ package com.samiuysal.fediversehub.feature.mastodon.mapper
 import androidx.core.text.HtmlCompat
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
 import com.samiuysal.fediversehub.feature.mastodon.MastodonLinkPreviewUiModel
+import com.samiuysal.fediversehub.feature.mastodon.MastodonMediaUiModel
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonMediaAttachmentDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonPreviewCardDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
@@ -22,7 +23,8 @@ object MastodonTimelineMapper {
             dto.account.displayName.ifBlank { dto.account.username }
         }
         return MastodonPost(
-            id = status.id,
+            id = dto.id,
+            detailId = status.id,
             authorDisplayName = htmlToPlainText(displayName),
             authorUsername = status.account.acct.ifBlank { status.account.username },
             authorAvatarUrl = status.account.avatarStatic ?: status.account.avatar,
@@ -42,12 +44,14 @@ object MastodonTimelineMapper {
 
     fun domainToUi(domain: MastodonPost): MastodonPostUiModel = MastodonPostUiModel(
         id = domain.id,
+        detailId = domain.detailId,
         displayName = domain.authorDisplayName,
         username = "@${domain.authorUsername}",
         avatarUrl = domain.authorAvatarUrl,
         timeAgo = domain.createdAt.toRelativeTimeLabel(),
         content = domain.contentText,
         mediaUrl = domain.mediaAttachments.firstNotNullOfOrNull { it.previewUrl ?: it.url },
+        media = domain.mediaAttachments.map { it.toUi() },
         hasAltText = domain.mediaAttachments.any { !it.description.isNullOrBlank() },
         boostedByDisplayName = domain.boostedByDisplayName,
         boostedByAvatarUrl = domain.boostedByAvatarUrl,
@@ -58,6 +62,14 @@ object MastodonTimelineMapper {
         boosts = domain.reblogCount,
         favourites = domain.favouriteCount,
     )
+
+    private fun MastodonMediaAttachment.toUi(): MastodonMediaUiModel =
+        MastodonMediaUiModel(
+            id = id,
+            previewUrl = previewUrl ?: url,
+            fullUrl = url ?: previewUrl,
+            altText = description,
+        )
 
     private fun mediaDtoToDomain(dto: MastodonMediaAttachmentDto): MastodonMediaAttachment =
         MastodonMediaAttachment(
