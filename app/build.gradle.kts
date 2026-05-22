@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+val appVersionName = providers.gradleProperty("appVersionName").orElse("1.0")
+val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(1)
+
 android {
     namespace = "com.samiuysal.fediversehub"
     compileSdk = 36
@@ -16,8 +19,8 @@ android {
         applicationId = "com.samiuysal.fediversehub"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode.get()
+        versionName = appVersionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

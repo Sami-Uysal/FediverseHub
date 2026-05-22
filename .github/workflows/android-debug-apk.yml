@@ -6,10 +6,15 @@ on:
       - main
       - "mvp*"
       - "*mastodon*"
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-debug-apk:
@@ -31,11 +36,45 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+            VERSION_NAME="${VERSION#v}"
+          else
+            VERSION="debug-${GITHUB_SHA::7}"
+            VERSION_NAME="1.0"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --console=plain
+        run: >
+          ./gradlew :app:assembleDebug --no-daemon --console=plain
+          -PappVersionName=${{ steps.version.outputs.version_name }}
+          -PappVersionCode=${{ github.run_number }}
+
+      - name: Prepare versioned APK
+        shell: bash
+        run: |
+          mkdir -p app/build/outputs/apk/upload
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            "app/build/outputs/apk/upload/FediverseHub-${{ steps.version.outputs.version }}-debug.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FediverseHub-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: FediverseHub-${{ steps.version.outputs.version }}-debug-apk
+          path: app/build/outputs/apk/upload/*.apk
+
+      - name: Upload APK to GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" app/build/outputs/apk/upload/*.apk \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Debug APK for ${GITHUB_REF_NAME}" \
+          || gh release upload "${GITHUB_REF_NAME}" app/build/outputs/apk/upload/*.apk --clobber
