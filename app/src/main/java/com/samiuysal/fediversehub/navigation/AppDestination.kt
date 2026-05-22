@@ -14,6 +14,7 @@ object AppDestination {
     const val CREATE = "create"
     const val NOTIFICATIONS = "notifications"
     const val PROFILE = "profile"
+    const val AUTH_MASTODON = "auth/mastodon"
 
     val bottomNavItems = listOf(
         AppBottomNavItem(HOME, "Home", Icons.Outlined.Home),

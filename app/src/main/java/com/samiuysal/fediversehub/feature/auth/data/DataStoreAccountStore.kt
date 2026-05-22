@@ -1,0 +1,84 @@
+package com.samiuysal.fediversehub.feature.auth.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
+import com.samiuysal.fediversehub.feature.auth.domain.MastodonOAuthSession
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+private val Context.authDataStore by preferencesDataStore(name = "auth_session")
+
+@Singleton
+class DataStoreAccountStore @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+) : AccountStore {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
+
+    override val accounts: Flow<List<Account>> = context.authDataStore.data.map { preferences ->
+        preferences[ACCOUNTS_JSON]
+            ?.decodeStoredAccounts()
+            ?.map(StoredAccount::toDomain)
+            .orEmpty()
+    }
+
+    override suspend fun saveAccount(account: Account) {
+        context.authDataStore.edit { preferences ->
+            val accounts = preferences[ACCOUNTS_JSON]
+                ?.decodeStoredAccounts()
+                .orEmpty()
+                .filterNot { it.id == account.id }
+                .plus(account.toStoredAccount())
+            preferences[ACCOUNTS_JSON] = json.encodeToString(accounts)
+        }
+    }
+
+    override suspend fun removeAccount(accountId: String) {
+        context.authDataStore.edit { preferences ->
+            val accounts = preferences[ACCOUNTS_JSON]
+                ?.decodeStoredAccounts()
+                .orEmpty()
+                .filterNot { it.id == accountId }
+            preferences[ACCOUNTS_JSON] = json.encodeToString(accounts)
+        }
+    }
+
+    override suspend fun readPendingMastodonOAuthSession(): MastodonOAuthSession? {
+        val preferences = context.authDataStore.data.first()
+        return preferences[PENDING_MASTODON_OAUTH_JSON]?.let { value ->
+            runCatching { json.decodeFromString<MastodonOAuthSession>(value) }.getOrNull()
+        }
+    }
+
+    override suspend fun savePendingMastodonOAuthSession(session: MastodonOAuthSession) {
+        context.authDataStore.edit { preferences ->
+            preferences[PENDING_MASTODON_OAUTH_JSON] = json.encodeToString(session)
+        }
+    }
+
+    override suspend fun clearPendingMastodonOAuthSession() {
+        context.authDataStore.edit { preferences ->
+            preferences.remove(PENDING_MASTODON_OAUTH_JSON)
+        }
+    }
+
+    private fun String.decodeStoredAccounts(): List<StoredAccount> =
+        runCatching { json.decodeFromString<List<StoredAccount>>(this) }.getOrDefault(emptyList())
+
+    private companion object {
+        val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
+        val PENDING_MASTODON_OAUTH_JSON = stringPreferencesKey("pending_mastodon_oauth_json")
+    }
+}

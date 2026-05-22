@@ -1,7 +1,9 @@
 package com.samiuysal.fediversehub.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -11,13 +13,25 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.samiuysal.fediversehub.core.designsystem.component.AppBottomBar
 import com.samiuysal.fediversehub.core.designsystem.component.AppScaffold
+import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
 
 @Composable
-fun FediverseHubApp() {
+fun FediverseHubApp(
+    oauthCallbackUri: Uri? = null,
+    onOAuthCallbackConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: AppDestination.HOME
+
+    LaunchedEffect(oauthCallbackUri) {
+        if (oauthCallbackUri != null) {
+            navController.navigate(AppDestination.PROFILE) {
+                launchSingleTop = true
+            }
+        }
+    }
 
     AppScaffold(
         bottomBar = {
@@ -65,11 +79,24 @@ fun FediverseHubApp() {
                 )
             }
             composable(AppDestination.PROFILE) {
-                PlaceholderRoute(
-                    title = "Profile",
-                    message = "Account switcher and profile tabs will live here after auth integration.",
-                    contentPadding = contentPadding,
-                )
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.padding(contentPadding),
+                ) {
+                    MastodonAuthRoute(
+                        oauthCallbackUri = oauthCallbackUri,
+                        onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                    )
+                }
+            }
+            composable(AppDestination.AUTH_MASTODON) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.padding(contentPadding),
+                ) {
+                    MastodonAuthRoute(
+                        oauthCallbackUri = oauthCallbackUri,
+                        onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                    )
+                }
             }
         }
     }
