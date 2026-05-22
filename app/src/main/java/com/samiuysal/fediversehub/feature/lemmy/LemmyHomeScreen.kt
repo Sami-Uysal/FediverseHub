@@ -1,10 +1,5 @@
 package com.samiuysal.fediversehub.feature.lemmy
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +51,6 @@ import androidx.paging.compose.itemKey
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
-import com.samiuysal.fediversehub.core.designsystem.motion.AppMotion
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
@@ -417,7 +411,7 @@ private fun LemmyFeedSkeleton() {
         verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
         userScrollEnabled = false,
     ) {
-        items(4) {
+        items(2) {
             LemmyPostSkeleton()
         }
     }
@@ -425,17 +419,7 @@ private fun LemmyFeedSkeleton() {
 
 @Composable
 private fun LemmyPostSkeleton() {
-    val transition = rememberInfiniteTransition(label = "lemmy_skeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.34f,
-        targetValue = 0.74f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(AppMotion.slow),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "lemmy_skeleton_alpha",
-    )
-    val color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
+    val color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f)
 
     Card(
         modifier = Modifier.fillMaxWidth(),

@@ -1,10 +1,5 @@
 package com.samiuysal.fediversehub.feature.mastodon
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,7 +44,6 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppPostAction
 import com.samiuysal.fediversehub.core.designsystem.component.AppPostCard
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
-import com.samiuysal.fediversehub.core.designsystem.motion.AppMotion
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
@@ -196,7 +190,7 @@ private fun MastodonTimelineSkeleton() {
         verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
         userScrollEnabled = false,
     ) {
-        items(4) {
+        items(2) {
             MastodonPostSkeleton()
         }
     }
@@ -204,17 +198,7 @@ private fun MastodonTimelineSkeleton() {
 
 @Composable
 private fun MastodonPostSkeleton() {
-    val transition = rememberInfiniteTransition(label = "mastodon_skeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.38f,
-        targetValue = 0.78f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(AppMotion.slow),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "mastodon_skeleton_alpha",
-    )
-    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
+    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f)
 
     Card(
         modifier = Modifier.fillMaxWidth(),

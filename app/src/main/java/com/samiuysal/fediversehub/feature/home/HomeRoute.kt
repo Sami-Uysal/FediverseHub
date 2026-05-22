@@ -20,8 +20,6 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
-    val lemmyPosts = viewModel.lemmyPosts.collectAsLazyPagingItems()
 
     Column(
         modifier = Modifier
@@ -35,16 +33,22 @@ fun HomeRoute(
             },
         )
         when (uiState.selectedPlatform) {
-            PlatformType.MASTODON -> MastodonHomeScreen(
-                account = uiState.selectedAccount,
-                posts = mastodonTimeline,
-                modifier = Modifier.weight(1f),
-            )
-            PlatformType.LEMMY -> LemmyHomeScreen(
-                account = uiState.selectedAccount,
-                posts = lemmyPosts,
-                modifier = Modifier.weight(1f),
-            )
+            PlatformType.MASTODON -> {
+                val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
+                MastodonHomeScreen(
+                    account = uiState.selectedAccount,
+                    posts = mastodonTimeline,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            PlatformType.LEMMY -> {
+                val lemmyPosts = viewModel.lemmyPosts.collectAsLazyPagingItems()
+                LemmyHomeScreen(
+                    account = uiState.selectedAccount,
+                    posts = lemmyPosts,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             PlatformType.PIXELFED -> PixelfedHomeScreen(
                 account = uiState.selectedAccount,
                 posts = uiState.pixelfedPosts,

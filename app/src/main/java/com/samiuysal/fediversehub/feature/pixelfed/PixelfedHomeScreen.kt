@@ -27,13 +27,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppCard
 import com.samiuysal.fediversehub.core.designsystem.component.AppIconButton
@@ -97,14 +101,13 @@ private fun ProfileGridPreview(posts: List<PixelfedPostUiModel>) {
             userScrollEnabled = false,
         ) {
             items(posts, key = { "grid-${it.id}" }) { post ->
-                AsyncImage(
-                    model = post.imageUrl,
+                PixelfedImage(
+                    imageUrl = post.imageUrl,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(AppRadius.sm)),
-                    contentScale = ContentScale.Crop,
                 )
             }
         }
@@ -151,11 +154,10 @@ private fun PixelfedPostCard(post: PixelfedPostUiModel) {
                 .clip(RoundedCornerShape(AppRadius.lg))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            AsyncImage(
-                model = post.imageUrl,
+            PixelfedImage(
+                imageUrl = post.imageUrl,
                 contentDescription = post.caption,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
             )
         }
         Spacer(Modifier.height(AppSpacing.md))
@@ -185,4 +187,28 @@ private fun PixelfedPostCard(post: PixelfedPostUiModel) {
             style = MaterialTheme.typography.bodyLarge,
         )
     }
+}
+
+@Composable
+private fun PixelfedImage(
+    imageUrl: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val request = remember(context, imageUrl) {
+        ImageRequest.Builder(context)
+            .data(imageUrl)
+            .crossfade(false)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .build()
+    }
+
+    AsyncImage(
+        model = request,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = ContentScale.Crop,
+    )
 }
