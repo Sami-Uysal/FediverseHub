@@ -10,6 +10,13 @@
 .idea/
 *.iml
 
+# Local agent / workspace tooling
+AGENTS.md
+.codex/
+.agents/
+.claude/
+.vscode/
+
 # Local machine config
 local.properties
 
