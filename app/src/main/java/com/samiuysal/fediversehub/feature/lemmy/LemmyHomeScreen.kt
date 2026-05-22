@@ -1,5 +1,10 @@
 package com.samiuysal.fediversehub.feature.lemmy
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -187,11 +193,11 @@ private fun LemmyPostList(posts: List<LemmyPostUiModel>) {
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
             start = AppSpacing.lg,
-            top = AppSpacing.sm,
+            top = 0.dp,
             end = AppSpacing.lg,
             bottom = AppSpacing.xl,
         ),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         items(
             items = posts,
@@ -209,11 +215,11 @@ private fun LemmyPostList(posts: LazyPagingItems<LemmyPostUiModel>) {
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
             start = AppSpacing.lg,
-            top = AppSpacing.sm,
+            top = 0.dp,
             end = AppSpacing.lg,
             bottom = AppSpacing.xl,
         ),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         items(
             count = posts.itemCount,
@@ -249,22 +255,17 @@ private fun LemmyPostList(posts: LazyPagingItems<LemmyPostUiModel>) {
 
 @Composable
 private fun LemmyPostCard(post: LemmyPostUiModel) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.42f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
-            modifier = Modifier.padding(AppSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+            modifier = Modifier.padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
                 verticalAlignment = Alignment.Top,
             ) {
                 ScorePillar(score = post.score)
@@ -281,7 +282,7 @@ private fun LemmyPostCard(post: LemmyPostUiModel) {
                         Text(
                             text = post.domain ?: "self",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -302,7 +303,7 @@ private fun LemmyPostCard(post: LemmyPostUiModel) {
                     )
                     Text(
                         text = "${post.author} · ${post.timeAgo}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
@@ -322,21 +323,24 @@ private fun LemmyPostCard(post: LemmyPostUiModel) {
                 NestedCommentPreview(comments = post.nestedComments.take(3))
             }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
+        )
     }
 }
 
 @Composable
 private fun CommunityChip(community: String) {
     Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
         contentColor = MaterialTheme.colorScheme.primary,
         shape = RoundedCornerShape(AppRadius.full),
     ) {
         Text(
             text = "c/$community",
             modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -346,10 +350,10 @@ private fun ScorePillar(score: Int) {
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(AppRadius.full))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
-            .padding(horizontal = AppSpacing.xs, vertical = AppSpacing.sm),
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f))
+            .padding(horizontal = AppSpacing.xxs, vertical = AppSpacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs),
     ) {
         Icon(
             imageVector = Icons.Outlined.KeyboardArrowUp,
@@ -358,7 +362,7 @@ private fun ScorePillar(score: Int) {
         )
         Text(
             text = score.compactMetric(),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
         )
         Icon(
@@ -428,11 +432,11 @@ private fun NestedCommentPreview(comments: List<CommentUiModel>) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
                 shape = RoundedCornerShape(AppRadius.md),
             )
-            .padding(AppSpacing.md),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            .padding(AppSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
     ) {
         comments.forEach { comment ->
             Row {
@@ -441,9 +445,9 @@ private fun NestedCommentPreview(comments: List<CommentUiModel>) {
                     Box(
                         modifier = Modifier
                             .width(2.dp)
-                            .height(42.dp)
+                            .height(36.dp)
                             .background(
-                                color = MaterialTheme.colorScheme.outline,
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.54f),
                                 shape = RoundedCornerShape(AppRadius.full),
                             ),
                     )
@@ -452,8 +456,8 @@ private fun NestedCommentPreview(comments: List<CommentUiModel>) {
                 Column {
                     Text(
                         text = comment.author,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
                     )
                     Text(
                         text = if (comment.isCollapsed) "Collapsed thread" else comment.text,
@@ -486,12 +490,22 @@ private fun LemmyFeedSkeleton() {
 
 @Composable
 private fun LemmyPostSkeleton() {
-    val color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f)
+    val transition = rememberInfiniteTransition(label = "lemmySkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.36f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 940),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "lemmySkeletonAlpha",
+    )
+    val color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier

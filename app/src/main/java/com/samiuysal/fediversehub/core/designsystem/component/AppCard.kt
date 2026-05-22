@@ -14,7 +14,7 @@ import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(AppSpacing.lg),
+    contentPadding: PaddingValues = PaddingValues(AppSpacing.md),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
@@ -24,9 +24,9 @@ fun AppCard(
         ),
         border = BorderStroke(
             width = AppSpacing.xxs,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.46f),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = AppSpacing.xs),
+        elevation = CardDefaults.cardElevation(defaultElevation = AppSpacing.xxs),
     ) {
         androidx.compose.foundation.layout.Column(
             modifier = Modifier.padding(contentPadding),

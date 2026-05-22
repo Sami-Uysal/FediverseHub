@@ -1,6 +1,5 @@
 package com.samiuysal.fediversehub.core.designsystem.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,11 +13,11 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,76 +41,77 @@ fun AppPostCard(
     modifier: Modifier = Modifier,
     onMoreClick: () -> Unit = {},
 ) {
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.42f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(PaddingValues(AppSpacing.lg)),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
-        ) {
-            AppAvatar(
-                imageUrl = avatarUrl,
-                name = displayName,
-                size = 46.dp,
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = AppSpacing.lg,
+                        vertical = AppSpacing.md,
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+            ) {
+                AppAvatar(
+                    imageUrl = avatarUrl,
+                    name = displayName,
+                    size = 42.dp,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = displayName,
+                            modifier = Modifier.weight(0.44f, fill = false),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "  $username · $timeAgo",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        IconButton(onClick = onMoreClick) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreHoriz,
+                                contentDescription = "More options",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(AppSpacing.xs))
                     Text(
-                        text = displayName,
-                        modifier = Modifier.weight(0.45f, fill = false),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        text = content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Text(
-                        text = "  $username · $timeAgo",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    IconButton(onClick = onMoreClick) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreHoriz,
-                            contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (mediaUrl != null) {
+                        Spacer(Modifier.height(AppSpacing.sm))
+                        AppMediaPreview(
+                            mediaUrl = mediaUrl,
+                            contentDescription = content,
                         )
                     }
-                }
-                Spacer(Modifier.height(AppSpacing.xs))
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                if (mediaUrl != null) {
-                    Spacer(Modifier.height(AppSpacing.md))
-                    AppMediaPreview(
-                        mediaUrl = mediaUrl,
-                        contentDescription = content,
+                    Spacer(Modifier.height(AppSpacing.sm))
+                    AppPostActionsRow(
+                        actions = actions,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Spacer(Modifier.height(AppSpacing.md))
-                AppPostActionsRow(
-                    actions = actions,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+            )
         }
     }
 }

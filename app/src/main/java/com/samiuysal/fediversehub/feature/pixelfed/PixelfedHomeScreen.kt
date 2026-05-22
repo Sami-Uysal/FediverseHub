@@ -26,9 +26,11 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -75,11 +77,18 @@ fun PixelfedHomeScreen(
         )
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(AppSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.lg),
+            contentPadding = PaddingValues(bottom = AppSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
         ) {
             item(key = "grid-preview") {
-                ProfileGridPreview(posts = posts)
+                ProfileGridPreview(
+                    posts = posts,
+                    modifier = Modifier.padding(
+                        start = AppSpacing.lg,
+                        top = AppSpacing.md,
+                        end = AppSpacing.lg,
+                    ),
+                )
             }
             items(
                 items = posts,
@@ -92,8 +101,14 @@ fun PixelfedHomeScreen(
 }
 
 @Composable
-private fun ProfileGridPreview(posts: List<PixelfedPostUiModel>) {
-    AppCard(contentPadding = PaddingValues(AppSpacing.md)) {
+private fun ProfileGridPreview(
+    posts: List<PixelfedPostUiModel>,
+    modifier: Modifier = Modifier,
+) {
+    AppCard(
+        modifier = modifier,
+        contentPadding = PaddingValues(AppSpacing.sm),
+    ) {
         Text(
             text = "Explore grid",
             style = MaterialTheme.typography.titleMedium,
@@ -125,11 +140,15 @@ private fun ProfileGridPreview(posts: List<PixelfedPostUiModel>) {
 
 @Composable
 private fun PixelfedPostCard(post: PixelfedPostUiModel) {
-    AppCard(contentPadding = PaddingValues(AppSpacing.md)) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = AppSpacing.md),
+                .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
         ) {
@@ -156,27 +175,21 @@ private fun PixelfedPostCard(post: PixelfedPostUiModel) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Box(
+        AppMediaCarousel(
+            imageUrls = listOf(post.imageUrl),
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(AppRadius.lg))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            PixelfedImage(
-                imageUrl = post.imageUrl,
-                contentDescription = post.caption,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Spacer(Modifier.height(AppSpacing.md))
+                .padding(horizontal = AppSpacing.lg),
+        )
+        Spacer(Modifier.height(AppSpacing.sm))
         Row(
+            modifier = Modifier.padding(horizontal = AppSpacing.lg),
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppIconButton(
-                icon = Icons.Outlined.FavoriteBorder,
-                contentDescription = "Like",
+            AppLikeButton(
+                likes = post.likes,
+                isLiked = false,
                 onClick = {},
             )
             AppIconButton(
@@ -185,16 +198,25 @@ private fun PixelfedPostCard(post: PixelfedPostUiModel) {
                 onClick = {},
             )
             Text(
-                text = "${post.likes} likes · ${post.comments} comments",
+                text = "${post.comments} comments",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
             text = post.caption,
-            modifier = Modifier.padding(horizontal = AppSpacing.sm),
+            modifier = Modifier.padding(
+                start = AppSpacing.lg,
+                top = AppSpacing.sm,
+                end = AppSpacing.lg,
+                bottom = AppSpacing.md,
+            ),
             style = MaterialTheme.typography.bodyLarge,
         )
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
+        )
+        }
     }
 }
 

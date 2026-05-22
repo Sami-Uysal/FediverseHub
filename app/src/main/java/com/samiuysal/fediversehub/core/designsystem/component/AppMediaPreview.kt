@@ -34,7 +34,7 @@ fun AppMediaPreview(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1.72f)
-            .clip(RoundedCornerShape(AppRadius.lg))
+            .clip(RoundedCornerShape(AppRadius.md))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
         if (!isPreview) {

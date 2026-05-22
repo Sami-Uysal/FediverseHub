@@ -1,5 +1,10 @@
 package com.samiuysal.fediversehub.feature.mastodon
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -157,11 +162,11 @@ private fun MastodonTimelineList(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
             start = AppSpacing.lg,
-            top = AppSpacing.sm,
+            top = 0.dp,
             end = AppSpacing.lg,
             bottom = AppSpacing.xl,
         ),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         items(
             items = posts,
@@ -181,11 +186,11 @@ private fun MastodonTimelineList(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
             start = AppSpacing.lg,
-            top = AppSpacing.sm,
+            top = 0.dp,
             end = AppSpacing.lg,
             bottom = AppSpacing.xl,
         ),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         items(
             count = posts.itemCount,
@@ -268,12 +273,22 @@ private fun MastodonTimelineSkeleton() {
 
 @Composable
 private fun MastodonPostSkeleton() {
-    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f)
+    val transition = rememberInfiniteTransition(label = "mastodonSkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.38f,
+        targetValue = 0.72f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 920),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "mastodonSkeletonAlpha",
+    )
+    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier

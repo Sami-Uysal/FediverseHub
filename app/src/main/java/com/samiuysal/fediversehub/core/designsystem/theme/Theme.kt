@@ -18,6 +18,9 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = HubSurfaceElevated,
     onSurfaceVariant = HubInkMuted,
     outline = HubLine,
+    outlineVariant = HubLine.copy(alpha = 0.72f),
+    inverseSurface = HubInk,
+    inverseOnSurface = HubSurface,
     error = HubRose,
 )
 
@@ -33,6 +36,9 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = HubDarkSurfaceElevated,
     onSurfaceVariant = ColorTokens.darkMuted,
     outline = HubDarkLine,
+    outlineVariant = HubDarkLine.copy(alpha = 0.7f),
+    inverseSurface = HubSurface,
+    inverseOnSurface = HubInk,
     error = ColorTokens.darkRose,
 )
 
