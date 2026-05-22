@@ -62,19 +62,22 @@ fun PixelfedHomeScreen(
     account: Account?,
     posts: List<PixelfedPostUiModel>,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
 ) {
     Column(modifier = modifier) {
-        AppTopBar(
-            title = account?.displayName ?: "Pixelfed",
-            subtitle = "@${account?.username.orEmpty()} · ${account?.instanceUrl.orEmpty()}",
-            actions = {
-                AppIconButton(
-                    icon = Icons.Outlined.GridView,
-                    contentDescription = "Profile grid",
-                    onClick = {},
-                )
-            },
-        )
+        if (showTopBar) {
+            AppTopBar(
+                title = account?.displayName ?: "Pixelfed",
+                subtitle = "@${account?.username.orEmpty()} · ${account?.instanceUrl.orEmpty()}",
+                actions = {
+                    AppIconButton(
+                        icon = Icons.Outlined.GridView,
+                        contentDescription = "Profile grid",
+                        onClick = {},
+                    )
+                },
+            )
+        }
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(bottom = AppSpacing.xl),
@@ -316,6 +319,7 @@ private fun PixelfedImage(
     val request = remember(context, imageUrl) {
         ImageRequest.Builder(context)
             .data(imageUrl)
+            .size(900, 900)
             .crossfade(false)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)

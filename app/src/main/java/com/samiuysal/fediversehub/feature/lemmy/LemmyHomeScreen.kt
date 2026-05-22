@@ -71,6 +71,7 @@ fun LemmyHomeScreen(
     account: Account?,
     posts: LazyPagingItems<LemmyPostUiModel>,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
 ) {
     val isRefreshing by remember(posts) {
         derivedStateOf { posts.loadState.refresh is LoadState.Loading }
@@ -85,7 +86,9 @@ fun LemmyHomeScreen(
     }
 
     Column(modifier = modifier) {
-        LemmyTopBar(account = account, onRefresh = posts::refresh)
+        if (showTopBar) {
+            LemmyTopBar(account = account, onRefresh = posts::refresh)
+        }
         SortSelector(
             selectedSort = "Hot",
             onSortSelected = {},
@@ -115,9 +118,12 @@ fun LemmyHomeScreenContent(
     errorMessage: String? = null,
     onRetry: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    showTopBar: Boolean = true,
 ) {
     Column(modifier = modifier) {
-        LemmyTopBar(account = account, onRefresh = onRefresh)
+        if (showTopBar) {
+            LemmyTopBar(account = account, onRefresh = onRefresh)
+        }
         SortSelector(
             selectedSort = "Hot",
             onSortSelected = {},

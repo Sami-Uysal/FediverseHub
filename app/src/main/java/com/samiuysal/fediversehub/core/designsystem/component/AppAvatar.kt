@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,8 @@ fun AppAvatar(
 ) {
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
+    val density = LocalDensity.current
+    val pixelSize = remember(density, size) { with(density) { size.roundToPx() } }
     Box(
         modifier = modifier
             .size(size)
@@ -38,9 +41,10 @@ fun AppAvatar(
         contentAlignment = Alignment.Center,
     ) {
         if (imageUrl != null && !isPreview) {
-            val request = remember(context, imageUrl) {
+            val request = remember(context, imageUrl, pixelSize) {
                 ImageRequest.Builder(context)
                     .data(imageUrl)
+                    .size(pixelSize, pixelSize)
                     .crossfade(false)
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.ENABLED)

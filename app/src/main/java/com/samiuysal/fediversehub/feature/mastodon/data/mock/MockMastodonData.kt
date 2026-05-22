@@ -2,6 +2,7 @@ package com.samiuysal.fediversehub.feature.mastodon.data.mock
 
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonMediaAttachment
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonMediaType
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonLinkPreview
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 
 object MockMastodonData {
@@ -12,8 +13,15 @@ object MockMastodonData {
             authorUsername = "nora@hachyderm.io",
             authorAvatarUrl = "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=96&h=96&fit=crop",
             createdAt = null,
-            contentText = "Compose feed performansında en büyük kazanç stable UI model + LazyColumn key kombinasyonundan geliyor. Bugün timeline cache katmanını RemoteMediator'a hazırladım.",
+            contentText = "Python 3.15: features that didn't make the headlines blog.changs.co.uk/python-315-features",
             mediaAttachments = emptyList(),
+            inReplyToAccountId = "thread-nix",
+            linkPreview = MastodonLinkPreview(
+                domain = "blog.changs.co.uk",
+                title = "Python 3.15: features that didn't make the headlines",
+                description = "It's that time of the year again: a compact tour of the quiet changes.",
+                thumbnailUrl = null,
+            ),
             replyCount = 12,
             reblogCount = 28,
             favouriteCount = 91,
@@ -35,6 +43,8 @@ object MockMastodonData {
                     description = "Laptop and code editor on a desk",
                 ),
             ),
+            boostedByDisplayName = "BrianKrebs",
+            boostedByAvatarUrl = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=96&h=96&fit=crop",
             replyCount = 5,
             reblogCount = 44,
             favouriteCount = 130,
@@ -46,8 +56,14 @@ object MockMastodonData {
             authorUsername = "androidweekly@mastodon.social",
             authorAvatarUrl = "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=96&h=96&fit=crop",
             createdAt = null,
-            contentText = "Material 3 works best when product teams add a clear component layer instead of sprinkling raw Material calls across every feature.",
+            contentText = "How to Convert Between Wealth and Income Tax paulgraham.com/winc.html #HackerNews #wealth #tax #finance",
             mediaAttachments = emptyList(),
+            linkPreview = MastodonLinkPreview(
+                domain = "paulgraham.com",
+                title = "How to Convert Between Wealth and Income Tax",
+                description = null,
+                thumbnailUrl = null,
+            ),
             replyCount = 18,
             reblogCount = 61,
             favouriteCount = 204,

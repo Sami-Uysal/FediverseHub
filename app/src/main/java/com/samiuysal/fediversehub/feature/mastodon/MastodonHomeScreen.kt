@@ -1,10 +1,5 @@
 package com.samiuysal.fediversehub.feature.mastodon
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,10 +40,13 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
+import com.samiuysal.fediversehub.core.common.error.AppErrorException
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
+import com.samiuysal.fediversehub.core.designsystem.component.AppLinkPreview
 import com.samiuysal.fediversehub.core.designsystem.component.AppPostAction
 import com.samiuysal.fediversehub.core.designsystem.component.AppPostCard
+import com.samiuysal.fediversehub.core.designsystem.component.AppCompactLinkPreview
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
@@ -63,6 +61,7 @@ fun MastodonHomeScreen(
     account: Account?,
     posts: LazyPagingItems<MastodonPostUiModel>,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
 ) {
     val isRefreshing by remember(posts) {
         derivedStateOf { posts.loadState.refresh is LoadState.Loading }
@@ -77,15 +76,17 @@ fun MastodonHomeScreen(
     }
 
     Column(modifier = modifier) {
-        MastodonTopBar(
-            account = account,
-            onRefresh = posts::refresh,
-        )
+        if (showTopBar) {
+            MastodonTopBar(
+                account = account,
+                onRefresh = posts::refresh,
+            )
+        }
 
         when {
             isRefreshing -> MastodonTimelineSkeleton()
             refreshError != null -> AppErrorState(
-                message = refreshError?.error?.message ?: "Timeline could not be loaded.",
+                message = refreshError?.error.timelineMessage(),
                 onRetry = posts::retry,
             )
             isEmpty -> EmptyState(
@@ -106,12 +107,15 @@ fun MastodonHomeScreenContent(
     errorMessage: String? = null,
     onRetry: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    showTopBar: Boolean = true,
 ) {
     Column(modifier = modifier) {
-        MastodonTopBar(
-            account = account,
-            onRefresh = onRefresh,
-        )
+        if (showTopBar) {
+            MastodonTopBar(
+                account = account,
+                onRefresh = onRefresh,
+            )
+        }
         when {
             isLoading -> MastodonTimelineSkeleton()
             errorMessage != null -> AppErrorState(
@@ -215,7 +219,7 @@ private fun MastodonTimelineList(
         if (appendError != null) {
             item(key = "mastodon-append-error") {
                 AppErrorState(
-                    message = appendError.error.message ?: "More posts could not be loaded.",
+                    message = appendError.error.timelineMessage(),
                     onRetry = posts::retry,
                     modifier = Modifier.height(220.dp),
                 )
@@ -253,6 +257,19 @@ private fun MastodonTimelinePost(post: MastodonPostUiModel) {
         avatarUrl = post.avatarUrl,
         content = post.content,
         mediaUrl = post.mediaUrl,
+        hasAltText = post.hasAltText,
+        boostedByDisplayName = post.boostedByDisplayName,
+        boostedByAvatarUrl = post.boostedByAvatarUrl,
+        replyContext = post.replyContext,
+        showThreadLine = post.showThreadLine,
+        linkPreview = post.linkPreview?.let {
+            AppLinkPreview(
+                domain = it.domain,
+                title = it.title,
+                description = it.description,
+                thumbnailUrl = it.thumbnailUrl,
+            )
+        },
         actions = actions,
     )
 }
@@ -273,17 +290,7 @@ private fun MastodonTimelineSkeleton() {
 
 @Composable
 private fun MastodonPostSkeleton() {
-    val transition = rememberInfiniteTransition(label = "mastodonSkeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.38f,
-        targetValue = 0.72f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 920),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "mastodonSkeletonAlpha",
-    )
-    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
+    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -353,6 +360,9 @@ private fun Int.compactMetric(): String = when {
     else -> toString()
 }
 
+private fun Throwable?.timelineMessage(): String =
+    (this as? AppErrorException)?.message ?: "Timeline could not be loaded. Pull to refresh or try again."
+
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun MastodonHomeScreenPreview() {
@@ -360,6 +370,42 @@ fun MastodonHomeScreenPreview() {
         MastodonHomeScreenContent(
             account = MockFediverseData.homeState.accounts.first { it.platform == PlatformType.MASTODON },
             posts = MockFediverseData.homeState.mastodonPosts,
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun MastodonBoostedPostPreview() {
+    FediverseHubTheme {
+        MastodonTimelinePost(
+            post = MockFediverseData.homeState.mastodonPosts.first { it.boostedByDisplayName != null },
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun MastodonThreadReplyPreview() {
+    FediverseHubTheme {
+        MastodonTimelinePost(
+            post = MockFediverseData.homeState.mastodonPosts.first { it.showThreadLine },
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun LinkPreviewPreview() {
+    FediverseHubTheme {
+        AppCompactLinkPreview(
+            linkPreview = AppLinkPreview(
+                domain = "blog.changs.co.uk",
+                title = "Python 3.15: features that didn't make the headlines",
+                description = "It's that time of the year again.",
+                thumbnailUrl = null,
+            ),
+            modifier = Modifier.padding(AppSpacing.lg),
         )
     }
 }

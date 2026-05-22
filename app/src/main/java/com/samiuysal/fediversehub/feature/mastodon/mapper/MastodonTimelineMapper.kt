@@ -2,8 +2,11 @@ package com.samiuysal.fediversehub.feature.mastodon.mapper
 
 import androidx.core.text.HtmlCompat
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
+import com.samiuysal.fediversehub.feature.mastodon.MastodonLinkPreviewUiModel
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonMediaAttachmentDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonPreviewCardDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonLinkPreview
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonMediaAttachment
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonMediaType
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
@@ -15,6 +18,9 @@ object MastodonTimelineMapper {
     fun dtoToDomain(dto: MastodonStatusDto): MastodonPost {
         val status = dto.reblog ?: dto
         val displayName = status.account.displayName.ifBlank { status.account.username }
+        val boostedByDisplayName = dto.reblog?.let {
+            dto.account.displayName.ifBlank { dto.account.username }
+        }
         return MastodonPost(
             id = status.id,
             authorDisplayName = htmlToPlainText(displayName),
@@ -23,6 +29,10 @@ object MastodonTimelineMapper {
             createdAt = status.createdAt,
             contentText = htmlToPlainText(status.content),
             mediaAttachments = status.mediaAttachments.map(::mediaDtoToDomain),
+            boostedByDisplayName = boostedByDisplayName?.let(::htmlToPlainText),
+            boostedByAvatarUrl = dto.reblog?.let { dto.account.avatarStatic ?: dto.account.avatar },
+            inReplyToAccountId = status.inReplyToAccountId,
+            linkPreview = status.card?.toDomain(),
             replyCount = status.repliesCount,
             reblogCount = status.reblogsCount,
             favouriteCount = status.favouritesCount,
@@ -38,6 +48,12 @@ object MastodonTimelineMapper {
         timeAgo = domain.createdAt.toRelativeTimeLabel(),
         content = domain.contentText,
         mediaUrl = domain.mediaAttachments.firstNotNullOfOrNull { it.previewUrl ?: it.url },
+        hasAltText = domain.mediaAttachments.any { !it.description.isNullOrBlank() },
+        boostedByDisplayName = domain.boostedByDisplayName,
+        boostedByAvatarUrl = domain.boostedByAvatarUrl,
+        replyContext = domain.inReplyToAccountId?.let { "Replying in thread" },
+        showThreadLine = domain.inReplyToAccountId != null,
+        linkPreview = domain.linkPreview?.toUi(),
         replies = domain.replyCount,
         boosts = domain.reblogCount,
         favourites = domain.favouriteCount,
@@ -51,6 +67,29 @@ object MastodonTimelineMapper {
             previewUrl = dto.previewUrl,
             description = dto.description,
         )
+
+    private fun MastodonPreviewCardDto.toDomain(): MastodonLinkPreview? {
+        if (title.isBlank()) return null
+        return MastodonLinkPreview(
+            domain = providerName?.takeIf { it.isNotBlank() } ?: url?.toDomainLabel().orEmpty(),
+            title = htmlToPlainText(title),
+            description = description.takeIf { it.isNotBlank() }?.let(::htmlToPlainText),
+            thumbnailUrl = image,
+        )
+    }
+
+    private fun MastodonLinkPreview.toUi(): MastodonLinkPreviewUiModel =
+        MastodonLinkPreviewUiModel(
+            domain = domain,
+            title = title,
+            description = description,
+            thumbnailUrl = thumbnailUrl,
+        )
+
+    private fun String.toDomainLabel(): String =
+        removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore("/")
 
     private fun String.toMediaType(): MastodonMediaType = when (lowercase()) {
         "image" -> MastodonMediaType.IMAGE

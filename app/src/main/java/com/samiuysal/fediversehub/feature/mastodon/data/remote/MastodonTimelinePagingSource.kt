@@ -2,7 +2,10 @@ package com.samiuysal.fediversehub.feature.mastodon.data.remote
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.samiuysal.fediversehub.core.common.error.AppError
+import com.samiuysal.fediversehub.core.common.error.AppErrorException
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
@@ -15,7 +18,7 @@ class MastodonTimelinePagingSource(
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, MastodonPost> {
         val token = account.accessToken
-            ?: return LoadResult.Error(IllegalStateException("Mastodon account needs login."))
+            ?: return LoadResult.Error(AppErrorException(AppError.Unauthorized))
 
         return try {
             val statuses = mastodonApi.getHomeTimeline(
@@ -33,7 +36,7 @@ class MastodonTimelinePagingSource(
                 nextKey = posts.lastOrNull()?.id?.takeIf { posts.isNotEmpty() },
             )
         } catch (throwable: Throwable) {
-            LoadResult.Error(throwable)
+            LoadResult.Error(AppErrorException(NetworkErrorMapper.map(throwable)))
         }
     }
 }

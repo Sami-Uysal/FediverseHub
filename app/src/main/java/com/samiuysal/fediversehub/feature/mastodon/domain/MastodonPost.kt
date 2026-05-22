@@ -8,6 +8,10 @@ data class MastodonPost(
     val createdAt: String?,
     val contentText: String,
     val mediaAttachments: List<MastodonMediaAttachment>,
+    val boostedByDisplayName: String? = null,
+    val boostedByAvatarUrl: String? = null,
+    val inReplyToAccountId: String? = null,
+    val linkPreview: MastodonLinkPreview? = null,
     val replyCount: Int,
     val reblogCount: Int,
     val favouriteCount: Int,
@@ -29,3 +33,10 @@ enum class MastodonMediaType {
     AUDIO,
     UNKNOWN,
 }
+
+data class MastodonLinkPreview(
+    val domain: String,
+    val title: String,
+    val description: String?,
+    val thumbnailUrl: String?,
+)

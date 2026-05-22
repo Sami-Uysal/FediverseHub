@@ -15,5 +15,7 @@ data class MastodonStatusDto(
     @SerialName("replies_count") val repliesCount: Int = 0,
     @SerialName("reblogs_count") val reblogsCount: Int = 0,
     @SerialName("favourites_count") val favouritesCount: Int = 0,
+    @SerialName("in_reply_to_account_id") val inReplyToAccountId: String? = null,
+    val card: MastodonPreviewCardDto? = null,
     val reblog: MastodonStatusDto? = null,
 )

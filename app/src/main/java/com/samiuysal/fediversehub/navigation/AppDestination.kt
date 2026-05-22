@@ -1,7 +1,7 @@
 package com.samiuysal.fediversehub.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -19,8 +19,8 @@ object AppDestination {
     val bottomNavItems = listOf(
         AppBottomNavItem(HOME, "Home", Icons.Outlined.Home),
         AppBottomNavItem(SEARCH, "Search", Icons.Outlined.Search),
-        AppBottomNavItem(CREATE, "Create", Icons.Outlined.AddCircleOutline),
-        AppBottomNavItem(NOTIFICATIONS, "Alerts", Icons.Outlined.Notifications),
+        AppBottomNavItem(CREATE, "Discover", Icons.Outlined.Explore),
+        AppBottomNavItem(NOTIFICATIONS, "Notifications", Icons.Outlined.Notifications),
         AppBottomNavItem(PROFILE, "Profile", Icons.Outlined.Person),
     )
 }

@@ -1,27 +1,30 @@
 package com.samiuysal.fediversehub.feature.home
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
@@ -36,71 +39,75 @@ fun PlatformSwitcher(
     onPlatformSelected: (PlatformType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.full),
-    ) {
-        Row(
+    var expanded by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    androidx.compose.foundation.layout.Box(modifier = modifier) {
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.xs),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                .widthIn(min = 128.dp, max = 164.dp)
+                .height(38.dp)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = { expanded = true },
+                ),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f),
+            contentColor = selectedPlatform.accentColor,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.full),
         ) {
-            PlatformType.entries.forEach { platform ->
-                PlatformSegment(
-                    platform = platform,
-                    selected = selectedPlatform == platform,
-                    onClick = { onPlatformSelected(platform) },
-                    modifier = Modifier.weight(1f),
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = AppSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = selectedPlatform.label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = selectedPlatform.accentColor,
+                )
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = "Select platform",
+                    modifier = Modifier.size(20.dp),
+                    tint = selectedPlatform.accentColor,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun PlatformSegment(
-    platform: PlatformType,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val accent = platform.accentColor
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "platformSegmentScale",
-    )
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) accent else Color.Transparent,
-        label = "platformSegmentContainer",
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "platformSegmentContent",
-    )
-
-    Box(
-        modifier = modifier
-            .height(34.dp)
-            .scale(scale)
-            .background(containerColor, androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.full))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = platform.label,
-            style = MaterialTheme.typography.labelLarge,
-            color = contentColor,
-        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.widthIn(min = 148.dp, max = 180.dp),
+        ) {
+            PlatformType.entries.forEach { platform ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = platform.label,
+                            fontWeight = if (platform == selectedPlatform) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Medium
+                            },
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onPlatformSelected(platform)
+                    },
+                    leadingIcon = {
+                        Surface(
+                            modifier = Modifier.size(10.dp),
+                            color = platform.accentColor,
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            content = {},
+                        )
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -119,13 +126,14 @@ private val PlatformType.accentColor: Color
         PlatformType.PIXELFED -> PlatformColors.pixelfed
     }
 
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(showBackground = true, widthDp = 390, heightDp = 160)
 @Composable
 fun PlatformSwitcherPreview() {
     FediverseHubTheme {
         PlatformSwitcher(
             selectedPlatform = PlatformType.MASTODON,
             onPlatformSelected = {},
+            modifier = Modifier.padding(AppSpacing.lg),
         )
     }
 }
