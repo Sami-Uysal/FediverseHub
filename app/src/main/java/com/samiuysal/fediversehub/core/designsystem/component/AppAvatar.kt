@@ -19,6 +19,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 
 @Composable
 fun AppAvatar(
@@ -28,6 +29,7 @@ fun AppAvatar(
     size: Dp = 44.dp,
 ) {
     val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
     Box(
         modifier = modifier
             .size(size)
@@ -35,7 +37,7 @@ fun AppAvatar(
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center,
     ) {
-        if (imageUrl != null) {
+        if (imageUrl != null && !isPreview) {
             val request = remember(context, imageUrl) {
                 ImageRequest.Builder(context)
                     .data(imageUrl)

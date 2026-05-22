@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -53,7 +55,10 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
+import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.home.MockFediverseData
 
 @Composable
 fun LemmyHomeScreen(
@@ -74,22 +79,7 @@ fun LemmyHomeScreen(
     }
 
     Column(modifier = modifier) {
-        AppTopBar(
-            title = "All communities",
-            subtitle = "${account?.instanceUrl.orEmpty()} · front page",
-            actions = {
-                AssistChip(
-                    onClick = posts::refresh,
-                    label = { Text("Hot") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.Sort,
-                            contentDescription = null,
-                        )
-                    },
-                )
-            },
-        )
+        LemmyTopBar(account = account, onRefresh = posts::refresh)
         SortSelector(
             selectedSort = "Hot",
             onSortSelected = {},
@@ -108,6 +98,61 @@ fun LemmyHomeScreen(
             else -> LemmyPostList(posts = posts)
         }
     }
+}
+
+@Composable
+fun LemmyHomeScreenContent(
+    account: Account?,
+    posts: List<LemmyPostUiModel>,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    onRetry: () -> Unit = {},
+    onRefresh: () -> Unit = {},
+) {
+    Column(modifier = modifier) {
+        LemmyTopBar(account = account, onRefresh = onRefresh)
+        SortSelector(
+            selectedSort = "Hot",
+            onSortSelected = {},
+        )
+
+        when {
+            isLoading -> LemmyFeedSkeleton()
+            errorMessage != null -> AppErrorState(
+                message = errorMessage,
+                onRetry = onRetry,
+            )
+            posts.isEmpty() -> EmptyState(
+                title = "No Lemmy posts",
+                message = "Community posts will appear here after refresh.",
+            )
+            else -> LemmyPostList(posts = posts)
+        }
+    }
+}
+
+@Composable
+private fun LemmyTopBar(
+    account: Account?,
+    onRefresh: () -> Unit,
+) {
+    AppTopBar(
+        title = "All communities",
+        subtitle = "${account?.instanceUrl.orEmpty()} · front page",
+        actions = {
+            AssistChip(
+                onClick = onRefresh,
+                label = { Text("Hot") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        contentDescription = null,
+                    )
+                },
+            )
+        },
+    )
 }
 
 @Composable
@@ -132,6 +177,28 @@ private fun SortSelector(
                     selectedLabelColor = MaterialTheme.colorScheme.primary,
                 ),
             )
+        }
+    }
+}
+
+@Composable
+private fun LemmyPostList(posts: List<LemmyPostUiModel>) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            start = AppSpacing.lg,
+            top = AppSpacing.sm,
+            end = AppSpacing.lg,
+            bottom = AppSpacing.xl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+    ) {
+        items(
+            items = posts,
+            key = { it.id },
+            contentType = { "lemmy-post" },
+        ) { post ->
+            LemmyPostCard(post = post)
         }
     }
 }
@@ -487,4 +554,33 @@ private fun Int.compactMetric(): String = when {
     this >= 1_000_000 -> "${this / 1_000_000}M"
     this >= 1_000 -> "${this / 1_000}K"
     else -> toString()
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun LemmyHomeScreenPreview() {
+    FediverseHubTheme {
+        LemmyHomeScreenContent(
+            account = MockFediverseData.homeState.accounts.first { it.platform == PlatformType.LEMMY },
+            posts = MockFediverseData.homeState.lemmyPosts,
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun LemmyPostCardPreview() {
+    FediverseHubTheme {
+        LemmyPostCard(post = MockFediverseData.homeState.lemmyPosts.first())
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun LemmyCommentPreview() {
+    FediverseHubTheme {
+        NestedCommentPreview(
+            comments = MockFediverseData.homeState.lemmyPosts.first().nestedComments.take(3),
+        )
+    }
 }

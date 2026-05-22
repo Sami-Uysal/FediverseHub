@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -22,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 
 @Composable
@@ -108,5 +113,25 @@ fun AppPostCard(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun AppPostCardPreview() {
+    FediverseHubTheme {
+        AppPostCard(
+            displayName = "Nora Dev",
+            username = "@nora@hachyderm.io",
+            timeAgo = "8m",
+            avatarUrl = null,
+            content = "Compose feed performance starts with stable UI models, explicit LazyColumn keys and a component layer that keeps the timeline boring in the best way.",
+            mediaUrl = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=720&h=420&fit=crop",
+            actions = listOf(
+                AppPostAction(Icons.Outlined.ChatBubbleOutline, "12", "Replies"),
+                AppPostAction(Icons.Outlined.Repeat, "44", "Boosts"),
+                AppPostAction(Icons.Outlined.FavoriteBorder, "130", "Favourites"),
+            ),
+        )
     }
 }

@@ -12,7 +12,13 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Repeat
+import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 
 @Immutable
@@ -60,5 +66,19 @@ fun AppPostActionsRow(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun AppPostActionsRowPreview() {
+    FediverseHubTheme {
+        AppPostActionsRow(
+            actions = listOf(
+                AppPostAction(Icons.Outlined.ChatBubbleOutline, "24", "Replies"),
+                AppPostAction(Icons.Outlined.Repeat, "118", "Boosts"),
+                AppPostAction(Icons.Outlined.FavoriteBorder, "1K", "Favourites"),
+            ),
+        )
     }
 }

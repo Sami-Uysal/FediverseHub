@@ -12,9 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.tooling.preview.Preview
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 
 @Composable
@@ -25,14 +28,7 @@ fun AppMediaPreview(
 ) {
     if (mediaUrl == null) return
     val context = LocalContext.current
-    val request = remember(context, mediaUrl) {
-        ImageRequest.Builder(context)
-            .data(mediaUrl)
-            .crossfade(false)
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .diskCachePolicy(CachePolicy.ENABLED)
-            .build()
-    }
+    val isPreview = LocalInspectionMode.current
 
     Box(
         modifier = modifier
@@ -41,11 +37,32 @@ fun AppMediaPreview(
             .clip(RoundedCornerShape(AppRadius.lg))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        AsyncImage(
-            model = request,
-            contentDescription = contentDescription,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
+        if (!isPreview) {
+            val request = remember(context, mediaUrl) {
+                ImageRequest.Builder(context)
+                    .data(mediaUrl)
+                    .crossfade(false)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .build()
+            }
+            AsyncImage(
+                model = request,
+                contentDescription = contentDescription,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun AppMediaPreviewPreview() {
+    FediverseHubTheme {
+        AppMediaPreview(
+            mediaUrl = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=720&h=420&fit=crop",
+            contentDescription = "Preview image",
         )
     }
 }

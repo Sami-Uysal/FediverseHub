@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -44,9 +46,12 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppPostAction
 import com.samiuysal.fediversehub.core.designsystem.component.AppPostCard
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
+import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.home.MockFediverseData
 
 @Composable
 fun MastodonHomeScreen(
@@ -67,25 +72,9 @@ fun MastodonHomeScreen(
     }
 
     Column(modifier = modifier) {
-        AppTopBar(
-            title = account?.displayName ?: "Mastodon",
-            subtitle = "@${account?.username.orEmpty()} · ${account?.instanceUrl.orEmpty()}",
-            actions = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                ) {
-                    AssistChip(
-                        onClick = posts::refresh,
-                        label = { Text("Live") },
-                    )
-                    AppAvatar(
-                        imageUrl = account?.avatarUrl,
-                        name = account?.displayName ?: "M",
-                        size = 36.dp,
-                    )
-                }
-            },
+        MastodonTopBar(
+            account = account,
+            onRefresh = posts::refresh,
         )
 
         when {
@@ -99,6 +88,87 @@ fun MastodonHomeScreen(
                 message = "Your Mastodon timeline will appear here after refresh.",
             )
             else -> MastodonTimelineList(posts = posts)
+        }
+    }
+}
+
+@Composable
+fun MastodonHomeScreenContent(
+    account: Account?,
+    posts: List<MastodonPostUiModel>,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    onRetry: () -> Unit = {},
+    onRefresh: () -> Unit = {},
+) {
+    Column(modifier = modifier) {
+        MastodonTopBar(
+            account = account,
+            onRefresh = onRefresh,
+        )
+        when {
+            isLoading -> MastodonTimelineSkeleton()
+            errorMessage != null -> AppErrorState(
+                message = errorMessage,
+                onRetry = onRetry,
+            )
+            posts.isEmpty() -> EmptyState(
+                title = "No posts yet",
+                message = "Your Mastodon timeline will appear here after refresh.",
+            )
+            else -> MastodonTimelineList(posts = posts)
+        }
+    }
+}
+
+@Composable
+private fun MastodonTopBar(
+    account: Account?,
+    onRefresh: () -> Unit,
+) {
+    AppTopBar(
+        title = account?.displayName ?: "Mastodon",
+        subtitle = "@${account?.username.orEmpty()} · ${account?.instanceUrl.orEmpty()}",
+        actions = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            ) {
+                AssistChip(
+                    onClick = onRefresh,
+                    label = { Text("Live") },
+                )
+                AppAvatar(
+                    imageUrl = account?.avatarUrl,
+                    name = account?.displayName ?: "M",
+                    size = 36.dp,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun MastodonTimelineList(
+    posts: List<MastodonPostUiModel>,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            start = AppSpacing.lg,
+            top = AppSpacing.sm,
+            end = AppSpacing.lg,
+            bottom = AppSpacing.xl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+    ) {
+        items(
+            items = posts,
+            key = { it.id },
+            contentType = { "mastodon-post" },
+        ) { post ->
+            MastodonTimelinePost(post = post)
         }
     }
 }
@@ -266,4 +336,15 @@ private fun Int.compactMetric(): String = when {
     this >= 1_000_000 -> "${this / 1_000_000}M"
     this >= 1_000 -> "${this / 1_000}K"
     else -> toString()
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun MastodonHomeScreenPreview() {
+    FediverseHubTheme {
+        MastodonHomeScreenContent(
+            account = MockFediverseData.homeState.accounts.first { it.platform == PlatformType.MASTODON },
+            posts = MockFediverseData.homeState.mastodonPosts,
+        )
+    }
 }
