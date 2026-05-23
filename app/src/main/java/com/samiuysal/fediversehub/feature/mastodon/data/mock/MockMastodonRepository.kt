@@ -24,6 +24,19 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
         pagingSourceFactory = { MockMastodonPagingSource() },
     ).flow
 
+    override fun getNotificationsPagingData(
+        account: Account,
+    ) = Pager(
+        config = PagingConfig(
+            pageSize = 30,
+            initialLoadSize = 30,
+            enablePlaceholders = false,
+        ),
+        pagingSourceFactory = {
+            MockMastodonNotificationsPagingSource(MockMastodonData.notifications)
+        },
+    ).flow
+
     override suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage,

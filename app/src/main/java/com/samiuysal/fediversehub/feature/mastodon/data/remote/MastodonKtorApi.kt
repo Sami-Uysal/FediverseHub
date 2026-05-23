@@ -3,6 +3,7 @@ package com.samiuysal.fediversehub.feature.mastodon.data.remote
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
@@ -111,6 +112,20 @@ class MastodonKtorApi @Inject constructor(
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v1/statuses/$statusId/context") {
             bearerAuth(accessToken)
+        }.body()
+    }
+
+    override suspend fun getNotifications(
+        instanceUrl: String,
+        accessToken: String,
+        maxId: String?,
+        limit: Int,
+    ): List<MastodonNotificationDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/notifications") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
+            maxId?.let { parameter("max_id", it) }
         }.body()
     }
 

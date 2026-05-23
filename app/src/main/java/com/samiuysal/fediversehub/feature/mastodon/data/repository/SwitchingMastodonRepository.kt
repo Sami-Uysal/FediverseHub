@@ -22,6 +22,10 @@ class SwitchingMastodonRepository @Inject constructor(
     ): Flow<PagingData<MastodonPost>> =
         account.repository().getHomeTimelinePagingData(account)
 
+    override fun getNotificationsPagingData(
+        account: Account,
+    ) = account.repository().getNotificationsPagingData(account)
+
     override suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage,

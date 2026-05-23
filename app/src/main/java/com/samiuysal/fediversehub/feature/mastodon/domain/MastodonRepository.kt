@@ -10,6 +10,10 @@ interface MastodonRepository {
         account: Account,
     ): Flow<PagingData<MastodonPost>>
 
+    fun getNotificationsPagingData(
+        account: Account,
+    ): Flow<PagingData<MastodonNotification>>
+
     suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage = MastodonTimelinePage(),

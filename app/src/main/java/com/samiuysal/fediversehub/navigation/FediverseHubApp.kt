@@ -19,6 +19,7 @@ import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
+import com.samiuysal.fediversehub.feature.mastodon.notifications.MastodonNotificationsRoute
 
 @Composable
 fun FediverseHubApp(
@@ -93,10 +94,16 @@ fun FediverseHubApp(
                 )
             }
             composable(AppDestination.NOTIFICATIONS) {
-                PlaceholderRoute(
-                    title = "Notifications",
-                    message = "Mentions, replies, boosts, votes and follows will share one inbox shell.",
+                MastodonNotificationsRoute(
                     contentPadding = contentPadding,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onProfileSelected = {
+                        navController.navigate(AppDestination.PROFILE) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(AppDestination.PROFILE) {

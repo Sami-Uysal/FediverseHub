@@ -3,6 +3,8 @@ package com.samiuysal.fediversehub.feature.mastodon.data.mock
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonMediaAttachment
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonMediaType
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonLinkPreview
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotification
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotificationType
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 
 object MockMastodonData {
@@ -68,6 +70,45 @@ object MockMastodonData {
             reblogCount = 61,
             favouriteCount = 204,
             url = null,
+        ),
+    )
+
+    val notifications = listOf(
+        MastodonNotification(
+            id = "n1",
+            type = MastodonNotificationType.MENTION,
+            createdAt = null,
+            accountDisplayName = "Nora Dev",
+            accountUsername = "nora@hachyderm.io",
+            accountAvatarUrl = "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=96&h=96&fit=crop",
+            status = homeTimeline.first(),
+        ),
+        MastodonNotification(
+            id = "n2",
+            type = MastodonNotificationType.FAVOURITE,
+            createdAt = null,
+            accountDisplayName = "Moshidon Labs",
+            accountUsername = "labs@fosstodon.org",
+            accountAvatarUrl = null,
+            status = homeTimeline[1],
+        ),
+        MastodonNotification(
+            id = "n3",
+            type = MastodonNotificationType.REBLOG,
+            createdAt = null,
+            accountDisplayName = "Android Weekly",
+            accountUsername = "androidweekly@mastodon.social",
+            accountAvatarUrl = "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=96&h=96&fit=crop",
+            status = homeTimeline[2],
+        ),
+        MastodonNotification(
+            id = "n4",
+            type = MastodonNotificationType.FOLLOW,
+            createdAt = null,
+            accountDisplayName = "Fediverse Design",
+            accountUsername = "design@mastodon.social",
+            accountAvatarUrl = null,
+            status = null,
         ),
     )
 }

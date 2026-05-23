@@ -13,7 +13,9 @@ import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonCacheMapper
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonTimelineDao
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonApi
+import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonNotificationsPagingSource
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonTimelineRemoteMediator
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotification
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
@@ -49,6 +51,26 @@ class MastodonRepositoryImpl @Inject constructor(
         },
     ).flow.map { pagingData ->
         pagingData.map(MastodonCacheMapper::entityToDomain)
+    }
+
+    override fun getNotificationsPagingData(
+        account: Account,
+    ): Flow<PagingData<MastodonNotification>> {
+        val accessToken = account.accessToken.orEmpty()
+        return Pager(
+            config = PagingConfig(
+                pageSize = 30,
+                initialLoadSize = 30,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = {
+                MastodonNotificationsPagingSource(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = accessToken,
+                    mastodonApi = mastodonApi,
+                )
+            },
+        ).flow
     }
 
     override suspend fun getHomeTimeline(

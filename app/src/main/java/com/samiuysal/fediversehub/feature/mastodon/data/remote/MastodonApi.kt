@@ -4,6 +4,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 
@@ -47,6 +48,13 @@ interface MastodonApi {
         accessToken: String,
         statusId: String,
     ): MastodonContextDto
+
+    suspend fun getNotifications(
+        instanceUrl: String,
+        accessToken: String,
+        maxId: String? = null,
+        limit: Int = 30,
+    ): List<MastodonNotificationDto>
 
     suspend fun favouriteStatus(
         instanceUrl: String,
