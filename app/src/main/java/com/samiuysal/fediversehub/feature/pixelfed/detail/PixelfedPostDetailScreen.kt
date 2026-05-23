@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -27,6 +28,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,6 +64,8 @@ fun PixelfedPostDetailScreen(
     onRetry: () -> Unit,
     onRetryComments: () -> Unit,
     onLikeClick: () -> Unit,
+    onCommentDraftChange: (String) -> Unit,
+    onSubmitComment: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,6 +85,8 @@ fun PixelfedPostDetailScreen(
                 state = uiState,
                 onRetryComments = onRetryComments,
                 onLikeClick = onLikeClick,
+                onCommentDraftChange = onCommentDraftChange,
+                onSubmitComment = onSubmitComment,
                 onMediaSelected = onMediaSelected,
                 modifier = Modifier.weight(1f),
             )
@@ -131,6 +137,8 @@ private fun PixelfedPostDetailContent(
     state: PixelfedPostDetailUiState.Success,
     onRetryComments: () -> Unit,
     onLikeClick: () -> Unit,
+    onCommentDraftChange: (String) -> Unit,
+    onSubmitComment: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -143,6 +151,15 @@ private fun PixelfedPostDetailContent(
                 post = state.post,
                 onLikeClick = onLikeClick,
                 onMediaSelected = onMediaSelected,
+            )
+        }
+        item(key = "pixelfed-comment-composer", contentType = "pixelfed-comment-composer") {
+            CommentComposer(
+                text = state.commentDraft,
+                isSubmitting = state.isSubmittingComment,
+                errorMessage = state.commentSubmitErrorMessage,
+                onTextChange = onCommentDraftChange,
+                onSubmit = onSubmitComment,
             )
         }
         item(key = "pixelfed-comments-title", contentType = "pixelfed-comments-title") {
@@ -193,6 +210,58 @@ private fun PixelfedPostDetailContent(
                     PixelfedCommentRow(comment = comment)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CommentComposer(
+    text: String,
+    isSubmitting: Boolean,
+    errorMessage: String?,
+    onTextChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = text,
+                onValueChange = onTextChange,
+                modifier = Modifier.weight(1f),
+                label = { Text("Yorum yaz") },
+                minLines = 1,
+                maxLines = 4,
+                enabled = !isSubmitting,
+                isError = errorMessage != null,
+            )
+            IconButton(
+                onClick = onSubmit,
+                enabled = text.isNotBlank() && !isSubmitting,
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = "Send comment",
+                    )
+                }
+            }
+        }
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
@@ -430,6 +499,8 @@ fun PixelfedPostDetailScreenPreview() {
             onRetry = {},
             onRetryComments = {},
             onLikeClick = {},
+            onCommentDraftChange = {},
+            onSubmitComment = {},
             onMediaSelected = { _, _, _ -> },
         )
     }

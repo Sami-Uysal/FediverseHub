@@ -171,6 +171,23 @@ private fun PixelfedProfileContent(
                 )
             }
         }
+        when (val appendState = media.loadState.append) {
+            LoadState.Loading -> {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    AppLoading(message = "Loading more media...", modifier = Modifier.height(96.dp))
+                }
+            }
+            is LoadState.Error -> {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    AppErrorState(
+                        message = appendState.error.localizedMessage ?: "More media failed.",
+                        onRetry = media::retry,
+                        modifier = Modifier.height(120.dp),
+                    )
+                }
+            }
+            is LoadState.NotLoading -> Unit
+        }
     }
 }
 

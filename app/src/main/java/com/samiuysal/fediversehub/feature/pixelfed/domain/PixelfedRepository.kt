@@ -14,4 +14,5 @@ interface PixelfedRepository {
     suspend fun getPost(account: Account, postId: String): AppResult<PixelfedPost>
     suspend fun setLiked(account: Account, postId: String, liked: Boolean): AppResult<PixelfedPost>
     suspend fun getComments(account: Account, postId: String): AppResult<List<PixelfedComment>>
+    suspend fun postComment(account: Account, postId: String, text: String): AppResult<PixelfedComment>
 }

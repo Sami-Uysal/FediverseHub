@@ -145,6 +145,26 @@ class PixelfedKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun postComment(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+        text: String,
+    ): MastodonStatusDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v1/statuses") {
+            bearerAuth(accessToken)
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("status", text)
+                        append("in_reply_to_id", statusId)
+                    },
+                ),
+            )
+        }.body()
+    }
+
     override suspend fun favouriteStatus(
         instanceUrl: String,
         accessToken: String,

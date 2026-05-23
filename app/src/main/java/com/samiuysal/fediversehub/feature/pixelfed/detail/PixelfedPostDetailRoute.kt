@@ -33,6 +33,8 @@ fun PixelfedPostDetailRoute(
         onRetry = viewModel::retry,
         onRetryComments = viewModel::retryComments,
         onLikeClick = viewModel::onLikeClick,
+        onCommentDraftChange = viewModel::onCommentDraftChange,
+        onSubmitComment = viewModel::submitComment,
         onMediaSelected = onMediaSelected,
         modifier = Modifier.padding(contentPadding),
     )

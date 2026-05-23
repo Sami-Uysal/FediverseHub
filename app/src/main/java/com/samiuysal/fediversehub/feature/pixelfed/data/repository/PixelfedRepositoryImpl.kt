@@ -135,6 +135,27 @@ class PixelfedRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun postComment(
+        account: Account,
+        postId: String,
+        text: String,
+    ): AppResult<PixelfedComment> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val status = pixelfedApi.postComment(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+                statusId = postId,
+                text = text,
+            )
+            AppResult.Success(PixelfedMapper.statusToComment(status))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
     private fun Account.pixelfedRemoteId(): String =
         id.substringAfterLast("-")
 

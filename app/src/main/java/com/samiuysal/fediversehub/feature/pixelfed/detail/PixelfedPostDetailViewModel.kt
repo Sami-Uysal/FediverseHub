@@ -92,6 +92,60 @@ class PixelfedPostDetailViewModel @Inject constructor(
         }
     }
 
+    fun onCommentDraftChange(value: String) {
+        _uiState.update { state ->
+            (state as? PixelfedPostDetailUiState.Success)
+                ?.copy(commentDraft = value.take(COMMENT_MAX_LENGTH), commentSubmitErrorMessage = null)
+                ?: state
+        }
+    }
+
+    fun submitComment() {
+        val current = _uiState.value as? PixelfedPostDetailUiState.Success ?: return
+        val text = current.commentDraft.trim()
+        if (text.isBlank() || current.isSubmittingComment) return
+
+        _uiState.value = current.copy(
+            isSubmittingComment = true,
+            commentSubmitErrorMessage = null,
+        )
+        viewModelScope.launch {
+            when (
+                val result = pixelfedRepository.postComment(
+                    account = pixelfedAccount(),
+                    postId = current.post.id,
+                    text = text,
+                )
+            ) {
+                is AppResult.Success -> {
+                    _uiState.update { state ->
+                        val success = state as? PixelfedPostDetailUiState.Success ?: return@update state
+                        success.copy(
+                            post = success.post.copy(comments = success.post.comments + 1),
+                            comments = success.comments + result.data,
+                            commentDraft = "",
+                            isSubmittingComment = false,
+                            commentSubmitErrorMessage = null,
+                        )
+                    }
+                }
+                is AppResult.Failure -> {
+                    _uiState.update { state ->
+                        (state as? PixelfedPostDetailUiState.Success)
+                            ?.copy(
+                                isSubmittingComment = false,
+                                commentSubmitErrorMessage = result.error.userMessage(),
+                            )
+                            ?: state
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(PixelfedPostDetailEffect.NavigateToLogin)
+                    }
+                }
+            }
+        }
+    }
+
     private fun load() {
         viewModelScope.launch {
             _uiState.value = PixelfedPostDetailUiState.Loading
@@ -168,3 +222,5 @@ class PixelfedPostDetailViewModel @Inject constructor(
 sealed interface PixelfedPostDetailEffect {
     data object NavigateToLogin : PixelfedPostDetailEffect
 }
+
+private const val COMMENT_MAX_LENGTH = 500

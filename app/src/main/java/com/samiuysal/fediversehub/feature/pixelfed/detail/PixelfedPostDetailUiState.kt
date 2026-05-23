@@ -13,6 +13,9 @@ sealed interface PixelfedPostDetailUiState {
         val comments: List<PixelfedComment> = emptyList(),
         val isCommentsLoading: Boolean = false,
         val commentsErrorMessage: String? = null,
+        val commentDraft: String = "",
+        val isSubmittingComment: Boolean = false,
+        val commentSubmitErrorMessage: String? = null,
     ) : PixelfedPostDetailUiState
 
     data class Error(val message: String) : PixelfedPostDetailUiState
