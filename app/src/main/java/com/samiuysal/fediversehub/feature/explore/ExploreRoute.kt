@@ -69,6 +69,7 @@ fun ExploreRoute(
     selectedAccount: Account?,
     contentPadding: PaddingValues,
     onPostSelected: (String) -> Unit,
+    onPixelfedPostSelected: (String) -> Unit,
     onHashtagSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     viewModel: ExploreViewModel = hiltViewModel(),
@@ -98,6 +99,7 @@ fun ExploreRoute(
                 account = selectedAccount,
                 posts = posts,
                 contentPadding = contentPadding,
+                onPostSelected = onPixelfedPostSelected,
                 onMediaSelected = onMediaSelected,
             )
         }
@@ -356,6 +358,7 @@ private fun PixelfedExploreContent(
     account: Account?,
     posts: androidx.paging.compose.LazyPagingItems<PixelfedPostUiModel>,
     contentPadding: PaddingValues,
+    onPostSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
 ) {
     Column(
@@ -405,11 +408,7 @@ private fun PixelfedExploreContent(
                         PixelfedExploreTile(
                             post = post,
                             onClick = {
-                                onMediaSelected(
-                                    post.fullImageUrls.ifEmpty { listOf(post.imageUrl) },
-                                    post.altFlags,
-                                    0,
-                                )
+                                onPostSelected(post.id)
                             },
                         )
                     }

@@ -25,6 +25,7 @@ import com.samiuysal.fediversehub.feature.home.HomeRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
 import com.samiuysal.fediversehub.feature.notifications.PlatformNotificationsRoute
+import com.samiuysal.fediversehub.feature.pixelfed.detail.PixelfedPostDetailRoute
 import com.samiuysal.fediversehub.feature.profile.PlatformProfileRoute
 import com.samiuysal.fediversehub.feature.search.PlatformSearchRoute
 import com.samiuysal.fediversehub.feature.settings.SettingsRoute
@@ -91,6 +92,9 @@ fun FediverseHubApp(
                     onMastodonPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
+                    onPixelfedPostSelected = { postId ->
+                        navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
                     onMastodonMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
@@ -126,6 +130,9 @@ fun FediverseHubApp(
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
+                    onPixelfedPostSelected = { postId ->
+                        navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
                     onHashtagSelected = { hashtag ->
                         navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
                     },
@@ -159,6 +166,9 @@ fun FediverseHubApp(
                     onOAuthCallbackConsumed = onOAuthCallbackConsumed,
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onPixelfedPostSelected = { postId ->
+                        navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
                     },
                     onMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
@@ -199,6 +209,27 @@ fun FediverseHubApp(
                 ),
             ) {
                 MastodonPostDetailRoute(
+                    contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                    onMediaSelected = { urls, altFlags, index ->
+                        navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
+                    },
+                    onUnauthorized = {
+                        navController.navigate(AppDestination.PROFILE) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            composable(
+                route = AppDestination.PIXELFED_POST_DETAIL,
+                arguments = listOf(
+                    navArgument(AppDestination.POST_ID_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) {
+                PixelfedPostDetailRoute(
                     contentPadding = contentPadding,
                     onBack = navController::navigateUp,
                     onMediaSelected = { urls, altFlags, index ->

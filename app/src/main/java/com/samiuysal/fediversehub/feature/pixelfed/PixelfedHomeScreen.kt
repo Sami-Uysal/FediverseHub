@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -61,7 +58,6 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Precision
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
-import com.samiuysal.fediversehub.core.designsystem.component.AppCard
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppIconButton
 import com.samiuysal.fediversehub.core.designsystem.component.AppLoading
@@ -82,6 +78,7 @@ fun PixelfedHomeScreen(
     actionOverrides: Map<String, PixelfedPostUiModel>,
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
+    onPostClick: (String) -> Unit,
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
     onLikeClick: (PixelfedPostUiModel) -> Unit,
     onCommentsClick: (PixelfedPostUiModel) -> Unit,
@@ -134,18 +131,6 @@ fun PixelfedHomeScreen(
                     }
                 }
             }
-            if (posts.itemCount > 0) {
-                item(key = "grid-preview", contentType = "grid-preview") {
-                    ProfileGridPreview(
-                        posts = (0 until posts.itemCount).mapNotNull(posts::peek).take(9),
-                        modifier = Modifier.padding(
-                            start = AppSpacing.lg,
-                            top = AppSpacing.md,
-                            end = AppSpacing.lg,
-                        ),
-                    )
-                }
-            }
             items(
                 count = posts.itemCount,
                 key = posts.itemKey { it.id },
@@ -155,6 +140,7 @@ fun PixelfedHomeScreen(
                     val visiblePost = actionOverrides[post.id] ?: post
                     PixelfedPostCard(
                         post = visiblePost,
+                        onClick = { onPostClick(visiblePost.id) },
                         onMediaClick = onMediaClick,
                         onLikeClick = onLikeClick,
                         onCommentsClick = onCommentsClick,
@@ -181,6 +167,7 @@ fun PixelfedHomeScreenContent(
     posts: List<PixelfedPostUiModel>,
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
+    onPostClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
     onLikeClick: (PixelfedPostUiModel) -> Unit = {},
     onCommentsClick: (PixelfedPostUiModel) -> Unit = {},
@@ -196,15 +183,10 @@ fun PixelfedHomeScreenContent(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(bottom = AppSpacing.xl),
         ) {
-            item(key = "grid-preview") {
-                ProfileGridPreview(
-                    posts = posts,
-                    modifier = Modifier.padding(AppSpacing.lg),
-                )
-            }
             items(posts, key = { it.id }) { post ->
                 PixelfedPostCard(
                     post = post,
+                    onClick = { onPostClick(post.id) },
                     onMediaClick = onMediaClick,
                     onLikeClick = onLikeClick,
                     onCommentsClick = onCommentsClick,
@@ -215,53 +197,17 @@ fun PixelfedHomeScreenContent(
 }
 
 @Composable
-private fun ProfileGridPreview(
-    posts: List<PixelfedPostUiModel>,
-    modifier: Modifier = Modifier,
-) {
-    AppCard(
-        modifier = modifier,
-        contentPadding = PaddingValues(AppSpacing.sm),
-    ) {
-        Text(
-            text = "Explore grid",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(AppSpacing.md))
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(132.dp),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-            userScrollEnabled = false,
-        ) {
-            items(posts, key = { "grid-${it.id}" }) { post ->
-                PixelfedImage(
-                    imageUrl = post.imageUrl,
-                    imageSize = GRID_IMAGE_SIZE,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(AppRadius.sm)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun PixelfedPostCard(
     post: PixelfedPostUiModel,
+    onClick: () -> Unit,
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
     onLikeClick: (PixelfedPostUiModel) -> Unit,
     onCommentsClick: (PixelfedPostUiModel) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         color = MaterialTheme.colorScheme.background,
     ) {
         Column {
@@ -633,7 +579,6 @@ private fun PixelfedPostSkeleton() {
 }
 
 private const val FEED_IMAGE_SIZE = 720
-private const val GRID_IMAGE_SIZE = 180
 private const val COLLAPSED_CAPTION_THRESHOLD = 72
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
@@ -653,18 +598,11 @@ fun PixelfedPostCardPreview() {
     FediverseHubTheme {
         PixelfedPostCard(
             post = MockFediverseData.homeState.pixelfedPosts.first(),
+            onClick = {},
             onMediaClick = { _, _, _ -> },
             onLikeClick = {},
             onCommentsClick = {},
         )
-    }
-}
-
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-fun PixelfedGridPreview() {
-    FediverseHubTheme {
-        ProfileGridPreview(posts = MockFediverseData.homeState.pixelfedPosts)
     }
 }
 

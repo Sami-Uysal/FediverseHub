@@ -11,6 +11,7 @@ interface PixelfedRepository {
     fun getExploreFeedPagingData(account: Account): Flow<PagingData<PixelfedPost>>
 
     suspend fun getOwnProfile(account: Account): AppResult<PixelfedProfile>
+    suspend fun getPost(account: Account, postId: String): AppResult<PixelfedPost>
     suspend fun setLiked(account: Account, postId: String, liked: Boolean): AppResult<PixelfedPost>
     suspend fun getComments(account: Account, postId: String): AppResult<List<PixelfedComment>>
 }

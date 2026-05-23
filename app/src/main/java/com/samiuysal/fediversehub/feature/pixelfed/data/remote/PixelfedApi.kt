@@ -56,6 +56,12 @@ interface PixelfedApi {
         statusId: String,
     ): MastodonContextDto
 
+    suspend fun getStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
     suspend fun favouriteStatus(
         instanceUrl: String,
         accessToken: String,

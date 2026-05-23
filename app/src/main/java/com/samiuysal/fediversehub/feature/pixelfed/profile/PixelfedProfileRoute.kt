@@ -65,6 +65,7 @@ fun PixelfedProfileRoute(
     onPlatformSelected: (PlatformType) -> Unit,
     onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
+    onPostSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     viewModel: PixelfedProfileViewModel = hiltViewModel(),
 ) {
@@ -105,6 +106,7 @@ fun PixelfedProfileRoute(
             is PixelfedProfileUiState.Success -> PixelfedProfileContent(
                 profile = state.profile,
                 media = media,
+                onPostSelected = onPostSelected,
                 onMediaSelected = onMediaSelected,
                 modifier = Modifier.weight(1f),
             )
@@ -116,6 +118,7 @@ fun PixelfedProfileRoute(
 private fun PixelfedProfileContent(
     profile: PixelfedProfile,
     media: androidx.paging.compose.LazyPagingItems<PixelfedPostUiModel>,
+    onPostSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -163,11 +166,7 @@ private fun PixelfedProfileContent(
                 PixelfedGridImage(
                     post = post,
                     onClick = {
-                        onMediaSelected(
-                            post.fullImageUrls.ifEmpty { listOf(post.imageUrl) },
-                            post.altFlags,
-                            0,
-                        )
+                        onPostSelected(post.id)
                     },
                 )
             }

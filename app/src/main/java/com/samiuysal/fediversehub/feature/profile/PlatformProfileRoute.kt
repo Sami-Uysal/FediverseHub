@@ -32,6 +32,7 @@ fun PlatformProfileRoute(
     oauthCallbackUri: Uri?,
     onOAuthCallbackConsumed: () -> Unit,
     onPostSelected: (String) -> Unit,
+    onPixelfedPostSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     onPlatformSelected: (PlatformType) -> Unit,
     onAccountSelected: (Account) -> Unit,
@@ -60,6 +61,7 @@ fun PlatformProfileRoute(
             onPlatformSelected = onPlatformSelected,
             onAccountSelected = onAccountSelected,
             onSettingsClick = onSettingsClick,
+            onPostSelected = onPixelfedPostSelected,
             onMediaSelected = onMediaSelected,
         )
         PlatformType.LEMMY -> ComingSoonProfile(
