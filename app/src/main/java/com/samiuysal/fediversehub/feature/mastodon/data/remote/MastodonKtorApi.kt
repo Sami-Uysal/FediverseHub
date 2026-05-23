@@ -172,6 +172,30 @@ class MastodonKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun createStatus(
+        instanceUrl: String,
+        accessToken: String,
+        text: String,
+        visibility: String,
+        spoilerText: String?,
+    ): MastodonStatusDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v1/statuses") {
+            bearerAuth(accessToken)
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("status", text)
+                        append("visibility", visibility)
+                        spoilerText
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { append("spoiler_text", it) }
+                    },
+                ),
+            )
+        }.body()
+    }
+
     private suspend fun postStatusAction(
         instanceUrl: String,
         accessToken: String,

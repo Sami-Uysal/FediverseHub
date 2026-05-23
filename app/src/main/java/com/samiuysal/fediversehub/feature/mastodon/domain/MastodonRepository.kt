@@ -44,4 +44,11 @@ interface MastodonRepository {
         text: String,
         visibility: String = "public",
     ): AppResult<MastodonPost>
+
+    suspend fun createPost(
+        account: Account,
+        text: String,
+        visibility: String = "public",
+        spoilerText: String? = null,
+    ): AppResult<MastodonPost>
 }

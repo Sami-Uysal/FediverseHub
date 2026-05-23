@@ -34,6 +34,9 @@ interface MastodonTimelineDao {
     @Query("SELECT COALESCE(MAX(timelinePosition), -1) FROM mastodon_posts WHERE accountId = :accountId")
     suspend fun maxTimelinePosition(accountId: String): Long
 
+    @Query("SELECT COALESCE(MIN(timelinePosition), 0) FROM mastodon_posts WHERE accountId = :accountId")
+    suspend fun minTimelinePosition(accountId: String): Long
+
     @Query("DELETE FROM mastodon_posts WHERE accountId = :accountId")
     suspend fun clearTimeline(accountId: String)
 

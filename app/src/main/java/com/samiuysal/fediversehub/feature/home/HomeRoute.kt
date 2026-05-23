@@ -34,6 +34,7 @@ import com.samiuysal.fediversehub.feature.lemmy.LemmyHomeScreen
 import com.samiuysal.fediversehub.feature.lemmy.LemmyHomeScreenContent
 import com.samiuysal.fediversehub.feature.mastodon.MastodonHomeScreen
 import com.samiuysal.fediversehub.feature.mastodon.MastodonHomeScreenContent
+import com.samiuysal.fediversehub.feature.mastodon.MastodonNewPostComposeSheet
 import com.samiuysal.fediversehub.feature.mastodon.MastodonReplyComposeSheet
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreen
 
@@ -48,6 +49,7 @@ fun HomeRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val mastodonActionOverrides by viewModel.mastodonActionOverrides.collectAsStateWithLifecycle()
     val replyComposeState by viewModel.replyComposeState.collectAsStateWithLifecycle()
+    val newPostComposeState by viewModel.newPostComposeState.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -61,6 +63,7 @@ fun HomeRoute(
         uiState = uiState,
         contentPadding = contentPadding,
         onPlatformSelected = { viewModel.onEvent(HomeUiEvent.PlatformSelected(it)) },
+        onComposerClick = viewModel::openNewPostCompose,
         mastodonContent = { modifier ->
             val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
             MastodonHomeScreen(
@@ -101,6 +104,18 @@ fun HomeRoute(
             onSend = viewModel::submitReply,
         )
     }
+
+    newPostComposeState?.let { state ->
+        MastodonNewPostComposeSheet(
+            state = state,
+            onTextChanged = viewModel::onNewPostTextChanged,
+            onVisibilityChanged = viewModel::onNewPostVisibilityChanged,
+            onContentWarningEnabledChanged = viewModel::onNewPostContentWarningEnabledChanged,
+            onContentWarningChanged = viewModel::onNewPostContentWarningChanged,
+            onDismiss = viewModel::dismissNewPostCompose,
+            onSend = viewModel::submitNewPost,
+        )
+    }
 }
 
 @Composable
@@ -108,6 +123,7 @@ fun HomeScreenContent(
     uiState: HomeUiState,
     contentPadding: PaddingValues,
     onPlatformSelected: (PlatformType) -> Unit,
+    onComposerClick: () -> Unit,
     mastodonContent: @Composable (Modifier) -> Unit,
     lemmyContent: @Composable (Modifier) -> Unit,
     pixelfedContent: @Composable (Modifier) -> Unit,
@@ -126,7 +142,7 @@ fun HomeScreenContent(
         HomeComposerPreview(
             account = uiState.selectedAccount,
             selectedPlatform = uiState.selectedPlatform,
-            onClick = {},
+            onClick = onComposerClick,
         )
         when (uiState.selectedPlatform) {
             PlatformType.MASTODON -> mastodonContent(Modifier.weight(1f))
@@ -228,6 +244,7 @@ fun HomeScreenContentPreview() {
             uiState = state,
             contentPadding = PaddingValues(),
             onPlatformSelected = {},
+            onComposerClick = {},
             mastodonContent = { modifier ->
                 MastodonHomeScreenContent(
                     account = state.selectedAccount,

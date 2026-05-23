@@ -154,6 +154,44 @@ class MastodonRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun createPost(
+        account: Account,
+        text: String,
+        visibility: String,
+        spoilerText: String?,
+    ): AppResult<MastodonPost> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val dto = mastodonApi.createStatus(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+                text = text,
+                visibility = visibility,
+                spoilerText = spoilerText,
+            )
+            val now = System.currentTimeMillis()
+            val position = mastodonTimelineDao.minTimelinePosition(account.id) - 1
+            mastodonTimelineDao.upsertPosts(
+                listOf(
+                    MastodonCacheMapper.dtoToPostEntity(
+                        dto = dto,
+                        account = account,
+                        timelinePosition = position,
+                        cachedAt = now,
+                    ),
+                ),
+            )
+            mastodonTimelineDao.upsertMedia(
+                MastodonCacheMapper.dtoToMediaEntities(dto = dto, accountId = account.id),
+            )
+            AppResult.Success(MastodonTimelineMapper.dtoToDomain(dto))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
     private suspend fun runStatusAction(
         account: Account,
         postId: String,

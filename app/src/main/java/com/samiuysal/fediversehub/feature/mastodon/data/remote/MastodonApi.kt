@@ -91,4 +91,12 @@ interface MastodonApi {
         text: String,
         visibility: String,
     ): MastodonStatusDto
+
+    suspend fun createStatus(
+        instanceUrl: String,
+        accessToken: String,
+        text: String,
+        visibility: String,
+        spoilerText: String?,
+    ): MastodonStatusDto
 }

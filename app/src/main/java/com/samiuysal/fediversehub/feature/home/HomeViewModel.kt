@@ -16,7 +16,9 @@ import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostActionType
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
+import com.samiuysal.fediversehub.feature.mastodon.MastodonNewPostComposeState
 import com.samiuysal.fediversehub.feature.mastodon.MastodonReplyComposeState
+import com.samiuysal.fediversehub.feature.mastodon.MastodonVisibility
 import com.samiuysal.fediversehub.feature.mastodon.canSend
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
@@ -56,6 +58,8 @@ class HomeViewModel @Inject constructor(
         _mastodonActionOverrides.asStateFlow()
     private val _replyComposeState = MutableStateFlow<MastodonReplyComposeState?>(null)
     val replyComposeState: StateFlow<MastodonReplyComposeState?> = _replyComposeState.asStateFlow()
+    private val _newPostComposeState = MutableStateFlow<MastodonNewPostComposeState?>(null)
+    val newPostComposeState: StateFlow<MastodonNewPostComposeState?> = _newPostComposeState.asStateFlow()
 
     val mastodonTimeline: Flow<PagingData<MastodonPostUiModel>> =
         uiState
@@ -200,6 +204,76 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun openNewPostCompose() {
+        if (_uiState.value.selectedPlatform != PlatformType.MASTODON) return
+        _newPostComposeState.value = MastodonNewPostComposeState()
+    }
+
+    fun onNewPostTextChanged(text: String) {
+        _newPostComposeState.update { state ->
+            state?.copy(text = text, errorMessage = null)
+        }
+    }
+
+    fun onNewPostVisibilityChanged(visibility: MastodonVisibility) {
+        _newPostComposeState.update { state ->
+            state?.copy(visibility = visibility, errorMessage = null)
+        }
+    }
+
+    fun onNewPostContentWarningEnabledChanged(enabled: Boolean) {
+        _newPostComposeState.update { state ->
+            state?.copy(isContentWarningEnabled = enabled, errorMessage = null)
+        }
+    }
+
+    fun onNewPostContentWarningChanged(contentWarning: String) {
+        _newPostComposeState.update { state ->
+            state?.copy(contentWarning = contentWarning, errorMessage = null)
+        }
+    }
+
+    fun dismissNewPostCompose() {
+        if (_newPostComposeState.value?.isSending == true) return
+        _newPostComposeState.value = null
+    }
+
+    fun submitNewPost() {
+        val state = _newPostComposeState.value ?: return
+        if (!state.canSend) {
+            _newPostComposeState.value = state.copy(errorMessage = "Post cannot be empty.")
+            return
+        }
+        val account = _uiState.value.accounts.firstOrNull { it.platform == PlatformType.MASTODON }
+            ?: return
+        _newPostComposeState.value = state.copy(isSending = true, errorMessage = null)
+        viewModelScope.launch {
+            when (
+                val result = mastodonRepository.createPost(
+                    account = account,
+                    text = state.text.trim(),
+                    visibility = state.visibility.apiValue,
+                    spoilerText = state.contentWarning.takeIf {
+                        state.isContentWarningEnabled && it.isNotBlank()
+                    },
+                )
+            ) {
+                is AppResult.Success -> {
+                    _newPostComposeState.value = null
+                }
+                is AppResult.Failure -> {
+                    _newPostComposeState.value = state.copy(
+                        isSending = false,
+                        errorMessage = result.error.postErrorMessage(),
+                    )
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                    }
+                }
+            }
+        }
+    }
+
     private fun selectPlatform(platform: PlatformType) {
         _uiState.update { it.copy(selectedPlatform = platform) }
     }
@@ -235,6 +309,14 @@ class HomeViewModel @Inject constructor(
         AppError.Network -> "Network failed. Check your connection and retry."
         is AppError.Server -> "Server error $code. Try again shortly."
         is AppError.Unknown -> message ?: "Reply could not be sent. Try again."
+    }
+
+    private fun AppError.postErrorMessage(): String = when (this) {
+        AppError.Unauthorized -> "Session expired. Log in again to post."
+        AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
+        AppError.Network -> "Network failed. Check your connection and retry."
+        is AppError.Server -> "Server error $code. Try again shortly."
+        is AppError.Unknown -> message ?: "Post could not be sent. Try again."
     }
 
     private fun MastodonPostUiModel.optimistic(action: MastodonPostActionType): MastodonPostUiModel =

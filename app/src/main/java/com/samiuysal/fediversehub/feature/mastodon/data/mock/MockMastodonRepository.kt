@@ -87,6 +87,34 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
         ),
     )
 
+    override suspend fun createPost(
+        account: Account,
+        text: String,
+        visibility: String,
+        spoilerText: String?,
+    ): AppResult<MastodonPost> = AppResult.Success(
+        MockMastodonData.homeTimeline.first().copy(
+            id = "mock-new-post-${text.hashCode()}",
+            detailId = "mock-new-post-${text.hashCode()}",
+            authorDisplayName = account.displayName ?: account.username,
+            authorUsername = account.username,
+            authorAvatarUrl = account.avatarUrl,
+            contentText = text,
+            mediaAttachments = emptyList(),
+            boostedByDisplayName = null,
+            boostedByAvatarUrl = null,
+            inReplyToAccountId = null,
+            linkPreview = null,
+            replyCount = 0,
+            reblogCount = 0,
+            favouriteCount = 0,
+            isReblogged = false,
+            isFavourited = false,
+            isBookmarked = false,
+            visibility = visibility,
+        ),
+    )
+
     private fun post(postId: String): MastodonPost =
         MockMastodonData.homeTimeline.firstOrNull { it.id == postId || it.detailId == postId }
             ?: MockMastodonData.homeTimeline.first()

@@ -62,6 +62,14 @@ class SwitchingMastodonRepository @Inject constructor(
     ): AppResult<MastodonPost> =
         account.repository().replyToPost(account, postId, text, visibility)
 
+    override suspend fun createPost(
+        account: Account,
+        text: String,
+        visibility: String,
+        spoilerText: String?,
+    ): AppResult<MastodonPost> =
+        account.repository().createPost(account, text, visibility, spoilerText)
+
     private fun Account.repository(): MastodonRepository =
         if (accessToken.isNullOrBlank()) mockRepository else realRepository
 }
