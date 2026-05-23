@@ -81,6 +81,7 @@ fun FediverseHubApp(
                 HomeRoute(
                     contentPadding = contentPadding,
                     selectedPlatform = appState.selectedPlatform,
+                    selectedAccount = appState.selectedAccount,
                     onPlatformSelected = appStateViewModel::selectPlatform,
                     onMastodonPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
@@ -122,6 +123,7 @@ fun FediverseHubApp(
             composable(AppDestination.NOTIFICATIONS) {
                 PlatformNotificationsRoute(
                     selectedPlatform = appState.selectedPlatform,
+                    selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
@@ -136,6 +138,7 @@ fun FediverseHubApp(
             composable(AppDestination.PROFILE) {
                 PlatformProfileRoute(
                     selectedPlatform = appState.selectedPlatform,
+                    platformAccounts = appState.platformAccounts,
                     selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
                     oauthCallbackUri = oauthCallbackUri,
@@ -144,6 +147,7 @@ fun FediverseHubApp(
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
                     onPlatformSelected = appStateViewModel::selectPlatform,
+                    onAccountSelected = appStateViewModel::selectAccount,
                     onSettingsClick = {
                         navController.navigate(AppDestination.SETTINGS)
                     },
@@ -152,7 +156,10 @@ fun FediverseHubApp(
             composable(AppDestination.SETTINGS) {
                 SettingsRoute(
                     selectedPlatform = appState.selectedPlatform,
+                    platformAccounts = appState.platformAccounts,
+                    selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
+                    onAccountSelected = appStateViewModel::selectAccount,
                     onBack = navController::navigateUp,
                 )
             }

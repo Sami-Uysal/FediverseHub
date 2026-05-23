@@ -42,6 +42,7 @@ import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreen
 fun HomeRoute(
     contentPadding: PaddingValues,
     selectedPlatform: PlatformType,
+    selectedAccount: Account?,
     onPlatformSelected: (PlatformType) -> Unit,
     onMastodonPostSelected: (String) -> Unit,
     onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
@@ -55,6 +56,9 @@ fun HomeRoute(
 
     LaunchedEffect(selectedPlatform) {
         viewModel.selectPlatform(selectedPlatform)
+    }
+    LaunchedEffect(selectedAccount?.id) {
+        viewModel.selectAccount(selectedAccount)
     }
 
     LaunchedEffect(viewModel) {

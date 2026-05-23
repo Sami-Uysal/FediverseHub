@@ -26,25 +26,33 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.profile.AccountSwitcher
 
 @Composable
 fun SettingsRoute(
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
+    selectedAccount: Account?,
     contentPadding: PaddingValues,
+    onAccountSelected: (Account) -> Unit,
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
-    val accounts by viewModel.accounts.collectAsStateWithLifecycle()
-    val account = accounts.firstOrNull { it.platform == selectedPlatform }
+    val storedAccounts by viewModel.accounts.collectAsStateWithLifecycle()
+    val account = selectedAccount?.takeIf { selected ->
+        storedAccounts.any { it.id == selected.id }
+    } ?: platformAccounts.firstOrNull()
 
     SettingsScreen(
         selectedPlatform = selectedPlatform,
+        platformAccounts = platformAccounts,
         account = account,
         contentPadding = contentPadding,
+        onAccountSelected = onAccountSelected,
         onBack = onBack,
         onLogout = {
             if (account != null) {
-                viewModel.logout(account.id)
+                viewModel.logout(account)
             }
         },
     )
@@ -53,8 +61,10 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
     account: Account?,
     contentPadding: PaddingValues,
+    onAccountSelected: (Account) -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -92,9 +102,21 @@ fun SettingsScreen(
                 value = selectedPlatform.label,
             )
             SettingsAccountRow(account = account)
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                Text(
+                    text = "Account switch",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                AccountSwitcher(
+                    accounts = platformAccounts,
+                    selectedAccount = account,
+                    onAccountSelected = onAccountSelected,
+                )
+            }
             SettingsRow(
-                title = "Account switch",
-                value = "Coming soon",
+                title = "Accounts on this platform",
+                value = "${platformAccounts.size}",
             )
             SettingsRow(
                 title = "App theme",

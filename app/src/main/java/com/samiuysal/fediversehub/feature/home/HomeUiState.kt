@@ -11,6 +11,7 @@ import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
 data class HomeUiState(
     val selectedPlatform: PlatformType = PlatformType.MASTODON,
     val accounts: List<Account> = emptyList(),
+    val activeAccountIds: Map<PlatformType, String> = emptyMap(),
     val isMastodonLoading: Boolean = false,
     val mastodonErrorMessage: String? = null,
     val mastodonPosts: List<MastodonPostUiModel> = emptyList(),
@@ -18,7 +19,11 @@ data class HomeUiState(
     val pixelfedPosts: List<PixelfedPostUiModel> = emptyList(),
 ) {
     val selectedAccount: Account?
-        get() = accounts.firstOrNull { it.platform == selectedPlatform }
+        get() {
+            val platformAccounts = accounts.filter { it.platform == selectedPlatform }
+            return platformAccounts.firstOrNull { it.id == activeAccountIds[selectedPlatform] }
+                ?: platformAccounts.firstOrNull()
+        }
 }
 
 sealed interface HomeUiEvent {

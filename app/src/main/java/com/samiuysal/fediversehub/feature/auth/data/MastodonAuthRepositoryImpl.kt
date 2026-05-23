@@ -94,6 +94,7 @@ class MastodonAuthRepositoryImpl @Inject constructor(
                 accessToken = token.accessToken,
             )
             accountStore.saveAccount(account)
+            accountStore.saveActiveAccount(account.platform, account.id)
             accountStore.clearPendingMastodonOAuthSession()
             AppResult.Success(account)
         }.getOrElse { throwable ->

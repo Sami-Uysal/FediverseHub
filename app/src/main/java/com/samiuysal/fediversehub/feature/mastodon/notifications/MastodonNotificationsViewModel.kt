@@ -14,6 +14,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -24,10 +26,13 @@ class MastodonNotificationsViewModel @Inject constructor(
     accountStore: AccountStore,
     private val mastodonRepository: MastodonRepository,
 ) : ViewModel() {
+    private val selectedAccountId = MutableStateFlow<String?>(null)
+
     private val mastodonAccount: Flow<Account> =
-        accountStore.accounts
-            .map { accounts ->
-                accounts.firstOrNull { it.platform == PlatformType.MASTODON }
+        combine(accountStore.accounts, selectedAccountId) { accounts, activeAccountId ->
+            accounts.firstOrNull {
+                it.platform == PlatformType.MASTODON && it.id == activeAccountId
+            } ?: accounts.firstOrNull { it.platform == PlatformType.MASTODON }
                     ?: Account(
                         id = "mastodon-notifications-preview",
                         platform = PlatformType.MASTODON,
@@ -37,7 +42,7 @@ class MastodonNotificationsViewModel @Inject constructor(
                         avatarUrl = null,
                         accessToken = null,
                     )
-            }
+        }
             .distinctUntilChanged()
 
     val notifications: Flow<PagingData<MastodonNotificationUiModel>> =
@@ -49,4 +54,8 @@ class MastodonNotificationsViewModel @Inject constructor(
                 pagingData.map(MastodonNotificationMapper::domainToUi)
             }
             .cachedIn(viewModelScope)
+
+    fun selectAccount(account: Account?) {
+        selectedAccountId.value = account?.id
+    }
 }

@@ -54,6 +54,7 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppPostCard
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
+import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
 import com.samiuysal.fediversehub.feature.mastodon.data.mock.MockMastodonData
@@ -65,10 +66,13 @@ import com.samiuysal.fediversehub.feature.profile.ProfilePlatformTopBar
 fun MastodonProfileScreen(
     uiState: MastodonProfileUiState,
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
+    selectedAccount: Account?,
     posts: LazyPagingItems<MastodonPostUiModel>,
     onFilterSelected: (MastodonProfileTimelineFilter) -> Unit,
     onPostSelected: (String) -> Unit,
     onPlatformSelected: (PlatformType) -> Unit,
+    onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -90,11 +94,14 @@ fun MastodonProfileScreen(
         is MastodonProfileUiState.Success -> MastodonProfileContent(
             profile = uiState.profile,
             selectedPlatform = selectedPlatform,
+            platformAccounts = platformAccounts,
+            selectedAccount = selectedAccount,
             selectedFilter = uiState.selectedFilter,
             posts = posts,
             onFilterSelected = onFilterSelected,
             onPostSelected = onPostSelected,
             onPlatformSelected = onPlatformSelected,
+            onAccountSelected = onAccountSelected,
             onSettingsClick = onSettingsClick,
             modifier = modifier,
         )
@@ -105,11 +112,14 @@ fun MastodonProfileScreen(
 private fun MastodonProfileContent(
     profile: MastodonProfileUiModel,
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
+    selectedAccount: Account?,
     selectedFilter: MastodonProfileTimelineFilter,
     posts: LazyPagingItems<MastodonPostUiModel>,
     onFilterSelected: (MastodonProfileTimelineFilter) -> Unit,
     onPostSelected: (String) -> Unit,
     onPlatformSelected: (PlatformType) -> Unit,
+    onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -130,7 +140,10 @@ private fun MastodonProfileContent(
         item(key = "profile-platform-indicator", contentType = "profile-platform-indicator") {
             ProfilePlatformTopBar(
                 selectedPlatform = selectedPlatform,
+                platformAccounts = platformAccounts,
+                selectedAccount = selectedAccount,
                 onPlatformSelected = onPlatformSelected,
+                onAccountSelected = onAccountSelected,
                 onSettingsClick = onSettingsClick,
             )
         }
@@ -189,10 +202,13 @@ fun MastodonProfileContentPreview(
     profile: MastodonProfileUiModel,
     posts: List<MastodonPostUiModel>,
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
+    selectedAccount: Account?,
     selectedFilter: MastodonProfileTimelineFilter,
     onFilterSelected: (MastodonProfileTimelineFilter) -> Unit,
     onPostSelected: (String) -> Unit,
     onPlatformSelected: (PlatformType) -> Unit,
+    onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -203,7 +219,10 @@ fun MastodonProfileContentPreview(
         item {
             ProfilePlatformTopBar(
                 selectedPlatform = selectedPlatform,
+                platformAccounts = platformAccounts,
+                selectedAccount = selectedAccount,
                 onPlatformSelected = onPlatformSelected,
+                onAccountSelected = onAccountSelected,
                 onSettingsClick = onSettingsClick,
             )
         }
@@ -462,10 +481,13 @@ fun MastodonProfileScreenPreview() {
             ),
             posts = MockMastodonData.homeTimeline.map(MastodonTimelineMapper::domainToUi),
             selectedPlatform = PlatformType.MASTODON,
+            platformAccounts = emptyList(),
+            selectedAccount = null,
             selectedFilter = MastodonProfileTimelineFilter.POSTS,
             onFilterSelected = {},
             onPostSelected = {},
             onPlatformSelected = {},
+            onAccountSelected = {},
             onSettingsClick = {},
         )
     }

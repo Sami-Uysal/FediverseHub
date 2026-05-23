@@ -7,31 +7,44 @@ import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 data class AppState(
     val selectedPlatform: PlatformType = PlatformType.MASTODON,
     val accounts: List<Account> = emptyList(),
+    val activeAccountIds: Map<PlatformType, String> = emptyMap(),
 ) {
+    val platformAccounts: List<Account>
+        get() = accounts.filter { it.platform == selectedPlatform }
+
     val selectedAccount: Account?
-        get() = accounts.firstOrNull { it.platform == selectedPlatform }
+        get() {
+            val platformAccounts = platformAccounts
+            return platformAccounts.firstOrNull { it.id == activeAccountIds[selectedPlatform] }
+                ?: platformAccounts.firstOrNull()
+        }
 }
 
 @HiltViewModel
 class AppStateViewModel @Inject constructor(
-    accountStore: AccountStore,
+    private val accountStore: AccountStore,
 ) : ViewModel() {
     private val selectedPlatform = MutableStateFlow(PlatformType.MASTODON)
 
     val uiState: StateFlow<AppState> =
-        combine(selectedPlatform, accountStore.accounts) { platform, accounts ->
+        combine(selectedPlatform, accountStore.activeAccountIds, accountStore.accounts) { platform, activeIds, accounts ->
+            val validActiveIds = activeIds.filterValues { activeId ->
+                accounts.any { it.id == activeId }
+            }
             AppState(
                 selectedPlatform = platform,
                 accounts = accounts,
+                activeAccountIds = validActiveIds,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -41,5 +54,11 @@ class AppStateViewModel @Inject constructor(
 
     fun selectPlatform(platform: PlatformType) {
         selectedPlatform.value = platform
+    }
+
+    fun selectAccount(account: Account) {
+        viewModelScope.launch {
+            accountStore.saveActiveAccount(account.platform, account.id)
+        }
     }
 }

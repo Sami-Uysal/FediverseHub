@@ -38,15 +38,19 @@ class MastodonProfileViewModel @Inject constructor(
     private val mastodonRepository: MastodonRepository,
 ) : ViewModel() {
     private val selectedFilter = MutableStateFlow(MastodonProfileTimelineFilter.POSTS)
+    private val selectedAccountId = MutableStateFlow<String?>(null)
     val selectedTimelineFilter: StateFlow<MastodonProfileTimelineFilter> = selectedFilter.asStateFlow()
 
     private val mastodonAccount: Flow<Account?> =
-        accountStore.accounts
-            .map { accounts ->
-                accounts.firstOrNull {
+        combine(accountStore.accounts, selectedAccountId) { accounts, activeAccountId ->
+            accounts.firstOrNull {
+                it.platform == PlatformType.MASTODON &&
+                    it.id == activeAccountId &&
+                    !it.accessToken.isNullOrBlank()
+            } ?: accounts.firstOrNull {
                     it.platform == PlatformType.MASTODON && !it.accessToken.isNullOrBlank()
                 }
-            }
+        }
             .distinctUntilChanged()
 
     val uiState: StateFlow<MastodonProfileUiState> =
@@ -97,6 +101,10 @@ class MastodonProfileViewModel @Inject constructor(
         viewModelScope.launch {
             selectedFilter.emit(filter)
         }
+    }
+
+    fun selectAccount(account: Account?) {
+        selectedAccountId.value = account?.id
     }
 
     private fun Account.mastodonRemoteId(): String =

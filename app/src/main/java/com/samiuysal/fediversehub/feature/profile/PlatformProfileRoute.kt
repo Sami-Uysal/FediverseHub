@@ -25,30 +25,37 @@ import com.samiuysal.fediversehub.feature.mastodon.profile.MastodonProfileRoute
 @Composable
 fun PlatformProfileRoute(
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
     selectedAccount: Account?,
     contentPadding: PaddingValues,
     oauthCallbackUri: Uri?,
     onOAuthCallbackConsumed: () -> Unit,
     onPostSelected: (String) -> Unit,
     onPlatformSelected: (PlatformType) -> Unit,
+    onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     when (selectedPlatform) {
         PlatformType.MASTODON -> MastodonProfileRoute(
             selectedPlatform = selectedPlatform,
+            platformAccounts = platformAccounts,
+            selectedAccount = selectedAccount,
             contentPadding = contentPadding,
             oauthCallbackUri = oauthCallbackUri,
             onOAuthCallbackConsumed = onOAuthCallbackConsumed,
             onPostSelected = onPostSelected,
             onPlatformSelected = onPlatformSelected,
+            onAccountSelected = onAccountSelected,
             onSettingsClick = onSettingsClick,
         )
         PlatformType.LEMMY,
         PlatformType.PIXELFED -> ComingSoonProfile(
             platform = selectedPlatform,
+            platformAccounts = platformAccounts,
             account = selectedAccount,
             contentPadding = contentPadding,
             onPlatformSelected = onPlatformSelected,
+            onAccountSelected = onAccountSelected,
             onSettingsClick = onSettingsClick,
         )
     }
@@ -57,9 +64,11 @@ fun PlatformProfileRoute(
 @Composable
 private fun ComingSoonProfile(
     platform: PlatformType,
+    platformAccounts: List<Account>,
     account: Account?,
     contentPadding: PaddingValues,
     onPlatformSelected: (PlatformType) -> Unit,
+    onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     Column(
@@ -69,7 +78,10 @@ private fun ComingSoonProfile(
     ) {
         ProfilePlatformTopBar(
             selectedPlatform = platform,
+            platformAccounts = platformAccounts,
+            selectedAccount = account,
             onPlatformSelected = onPlatformSelected,
+            onAccountSelected = onAccountSelected,
             onSettingsClick = onSettingsClick,
         )
         Row(

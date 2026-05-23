@@ -15,13 +15,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
+import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.home.PlatformSwitcher
 
 @Composable
 fun ProfilePlatformTopBar(
     selectedPlatform: PlatformType,
+    platformAccounts: List<Account>,
+    selectedAccount: Account?,
     onPlatformSelected: (PlatformType) -> Unit,
+    onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -48,6 +52,12 @@ fun ProfilePlatformTopBar(
                     )
                 }
             }
+            AccountSwitcher(
+                accounts = platformAccounts,
+                selectedAccount = selectedAccount,
+                onAccountSelected = onAccountSelected,
+                modifier = Modifier.padding(start = AppSpacing.md, end = AppSpacing.md, bottom = AppSpacing.sm),
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
         }
     }

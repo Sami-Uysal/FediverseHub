@@ -64,7 +64,7 @@ class HomeViewModel @Inject constructor(
     val mastodonTimeline: Flow<PagingData<MastodonPostUiModel>> =
         uiState
             .map { state ->
-                state.accounts.firstOrNull { it.platform == PlatformType.MASTODON }
+                state.activeAccount(PlatformType.MASTODON)
                     ?: fallbackAccount(PlatformType.MASTODON)
             }
             .distinctUntilChanged()
@@ -113,7 +113,7 @@ class HomeViewModel @Inject constructor(
             openReplyCompose(post)
             return
         }
-        val account = _uiState.value.accounts.firstOrNull { it.platform == PlatformType.MASTODON }
+        val account = _uiState.value.activeAccount(PlatformType.MASTODON)
             ?: return
         val before = _mastodonActionOverrides.value[post.detailId] ?: post
         val optimistic = before.optimistic(action).copy(loadingAction = action)
@@ -169,7 +169,7 @@ class HomeViewModel @Inject constructor(
             _replyComposeState.value = state.copy(errorMessage = "Reply needs more than a mention.")
             return
         }
-        val account = _uiState.value.accounts.firstOrNull { it.platform == PlatformType.MASTODON }
+        val account = _uiState.value.activeAccount(PlatformType.MASTODON)
             ?: return
         _replyComposeState.value = state.copy(isSending = true, errorMessage = null)
         viewModelScope.launch {
@@ -244,7 +244,7 @@ class HomeViewModel @Inject constructor(
             _newPostComposeState.value = state.copy(errorMessage = "Post cannot be empty.")
             return
         }
-        val account = _uiState.value.accounts.firstOrNull { it.platform == PlatformType.MASTODON }
+        val account = _uiState.value.activeAccount(PlatformType.MASTODON)
             ?: return
         _newPostComposeState.value = state.copy(isSending = true, errorMessage = null)
         viewModelScope.launch {
@@ -278,6 +278,13 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(selectedPlatform = platform) }
     }
 
+    fun selectAccount(account: Account?) {
+        if (account == null) return
+        _uiState.update {
+            it.copy(activeAccountIds = it.activeAccountIds + (account.platform to account.id))
+        }
+    }
+
     private fun mergeAccounts(storedAccounts: List<Account>): List<Account> {
         val fallbackAccounts = MockFediverseData.homeState.accounts
             .filterNot { fallback ->
@@ -288,6 +295,12 @@ class HomeViewModel @Inject constructor(
 
     private fun fallbackAccount(platform: PlatformType): Account =
         MockFediverseData.homeState.accounts.first { it.platform == platform }
+
+    private fun HomeUiState.activeAccount(platform: PlatformType): Account? {
+        val platformAccounts = accounts.filter { it.platform == platform }
+        return platformAccounts.firstOrNull { it.id == activeAccountIds[platform] }
+            ?: platformAccounts.firstOrNull()
+    }
 
     private fun setMastodonOverride(post: MastodonPostUiModel) {
         _mastodonActionOverrides.update { overrides ->

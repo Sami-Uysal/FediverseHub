@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.auth.domain.MastodonOAuthSession
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,6 +35,13 @@ class DataStoreAccountStore @Inject constructor(
             .orEmpty()
     }
 
+    override val activeAccountIds: Flow<Map<PlatformType, String>> =
+        context.authDataStore.data.map { preferences ->
+            preferences[ACTIVE_ACCOUNTS_JSON]
+                ?.decodeActiveAccounts()
+                .orEmpty()
+        }
+
     override suspend fun saveAccount(account: Account) {
         context.authDataStore.edit { preferences ->
             val accounts = preferences[ACCOUNTS_JSON]
@@ -52,6 +60,21 @@ class DataStoreAccountStore @Inject constructor(
                 .orEmpty()
                 .filterNot { it.id == accountId }
             preferences[ACCOUNTS_JSON] = json.encodeToString(accounts)
+            val activeAccounts = preferences[ACTIVE_ACCOUNTS_JSON]
+                ?.decodeActiveAccounts()
+                .orEmpty()
+                .filterValues { it != accountId }
+            preferences[ACTIVE_ACCOUNTS_JSON] = json.encodeToString(activeAccounts)
+        }
+    }
+
+    override suspend fun saveActiveAccount(platform: PlatformType, accountId: String) {
+        context.authDataStore.edit { preferences ->
+            val activeAccounts = preferences[ACTIVE_ACCOUNTS_JSON]
+                ?.decodeActiveAccounts()
+                .orEmpty()
+                .plus(platform to accountId)
+            preferences[ACTIVE_ACCOUNTS_JSON] = json.encodeToString(activeAccounts)
         }
     }
 
@@ -77,6 +100,9 @@ class DataStoreAccountStore @Inject constructor(
     private fun String.decodeStoredAccounts(): List<StoredAccount> =
         runCatching { json.decodeFromString<List<StoredAccount>>(this) }.getOrDefault(emptyList())
 
+    private fun String.decodeActiveAccounts(): Map<PlatformType, String> =
+        runCatching { json.decodeFromString<Map<PlatformType, String>>(this) }.getOrDefault(emptyMap())
+
     private fun StoredAccount.matches(account: Account): Boolean =
         platform == account.platform &&
             instanceUrl.normalizedInstance() == account.instanceUrl.normalizedInstance() &&
@@ -90,6 +116,7 @@ class DataStoreAccountStore @Inject constructor(
 
     private companion object {
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
+        val ACTIVE_ACCOUNTS_JSON = stringPreferencesKey("active_accounts_json")
         val PENDING_MASTODON_OAUTH_JSON = stringPreferencesKey("pending_mastodon_oauth_json")
     }
 }
