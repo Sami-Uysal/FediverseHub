@@ -25,6 +25,7 @@ import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRout
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
 import com.samiuysal.fediversehub.feature.notifications.PlatformNotificationsRoute
 import com.samiuysal.fediversehub.feature.profile.PlatformProfileRoute
+import com.samiuysal.fediversehub.feature.search.PlatformSearchRoute
 import com.samiuysal.fediversehub.feature.settings.SettingsRoute
 
 @Composable
@@ -95,10 +96,20 @@ fun FediverseHubApp(
                 )
             }
             composable(AppDestination.SEARCH) {
-                PlaceholderRoute(
-                    title = "Search",
-                    message = "Unified search will query people, communities, posts and tags by selected platform.",
+                PlatformSearchRoute(
+                    selectedPlatform = appState.selectedPlatform,
+                    selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
+                    onPlatformSelected = appStateViewModel::selectPlatform,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.searchAccountPlaceholder(accountId))
+                    },
+                    onHashtagSelected = { hashtag ->
+                        navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
+                    },
                 )
             }
             composable(AppDestination.CREATE) {
@@ -174,6 +185,42 @@ fun FediverseHubApp(
                             launchSingleTop = true
                         }
                     },
+                )
+            }
+            composable(
+                route = AppDestination.SEARCH_ACCOUNT_PLACEHOLDER,
+                arguments = listOf(
+                    navArgument(AppDestination.ACCOUNT_ID_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) { entry ->
+                val accountId = entry.arguments
+                    ?.getString(AppDestination.ACCOUNT_ID_ARGUMENT)
+                    ?.let(Uri::decode)
+                    .orEmpty()
+                PlaceholderRoute(
+                    title = "Account",
+                    message = "Profile detail for account $accountId will plug in here.",
+                    contentPadding = contentPadding,
+                )
+            }
+            composable(
+                route = AppDestination.SEARCH_HASHTAG_PLACEHOLDER,
+                arguments = listOf(
+                    navArgument(AppDestination.HASHTAG_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) { entry ->
+                val hashtag = entry.arguments
+                    ?.getString(AppDestination.HASHTAG_ARGUMENT)
+                    ?.let(Uri::decode)
+                    .orEmpty()
+                PlaceholderRoute(
+                    title = "#$hashtag",
+                    message = "Hashtag timeline will plug into this route.",
+                    contentPadding = contentPadding,
                 )
             }
             composable(

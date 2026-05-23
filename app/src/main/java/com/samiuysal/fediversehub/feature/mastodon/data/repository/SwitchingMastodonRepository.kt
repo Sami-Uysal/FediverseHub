@@ -9,6 +9,8 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchResult
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,6 +40,13 @@ class SwitchingMastodonRepository @Inject constructor(
         account: Account,
     ): AppResult<MastodonProfile> =
         account.repository().getOwnProfile(account)
+
+    override suspend fun search(
+        account: Account,
+        query: String,
+        category: MastodonSearchCategory,
+    ): AppResult<MastodonSearchResult> =
+        account.repository().search(account, query, category)
 
     override suspend fun getHomeTimeline(
         account: Account,

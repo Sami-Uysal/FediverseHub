@@ -22,8 +22,11 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchResult
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonProfileMapper
+import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonSearchMapper
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -113,6 +116,27 @@ class MastodonRepositoryImpl @Inject constructor(
                 accessToken = accessToken,
             )
             AppResult.Success(MastodonProfileMapper.dtoToDomain(profile))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun search(
+        account: Account,
+        query: String,
+        category: MastodonSearchCategory,
+    ): AppResult<MastodonSearchResult> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val result = mastodonApi.search(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+                query = query,
+                type = category.apiType,
+            )
+            AppResult.Success(MastodonSearchMapper.dtoToDomain(result))
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }

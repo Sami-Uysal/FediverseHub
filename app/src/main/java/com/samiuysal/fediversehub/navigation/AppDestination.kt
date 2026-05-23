@@ -21,9 +21,13 @@ object AppDestination {
     const val MEDIA_URLS_ARGUMENT = "urls"
     const val MEDIA_ALTS_ARGUMENT = "alts"
     const val MEDIA_INDEX_ARGUMENT = "index"
+    const val ACCOUNT_ID_ARGUMENT = "accountId"
+    const val HASHTAG_ARGUMENT = "hashtag"
     const val MASTODON_POST_DETAIL = "mastodon/post/{$POST_ID_ARGUMENT}"
     const val MASTODON_MEDIA_VIEWER =
         "mastodon/media?urls={$MEDIA_URLS_ARGUMENT}&alts={$MEDIA_ALTS_ARGUMENT}&index={$MEDIA_INDEX_ARGUMENT}"
+    const val SEARCH_ACCOUNT_PLACEHOLDER = "search/account/{$ACCOUNT_ID_ARGUMENT}"
+    const val SEARCH_HASHTAG_PLACEHOLDER = "search/hashtag/{$HASHTAG_ARGUMENT}"
 
     val bottomNavItems = listOf(
         AppBottomNavItem(HOME, "Home", Icons.Outlined.Home),
@@ -34,6 +38,12 @@ object AppDestination {
     )
 
     fun mastodonPostDetail(postId: String): String = "mastodon/post/$postId"
+
+    fun searchAccountPlaceholder(accountId: String): String =
+        "search/account/${Uri.encode(accountId)}"
+
+    fun searchHashtagPlaceholder(hashtag: String): String =
+        "search/hashtag/${Uri.encode(hashtag)}"
 
     fun mastodonMediaViewer(
         urls: List<String>,

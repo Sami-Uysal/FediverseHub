@@ -5,6 +5,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 
@@ -65,6 +66,14 @@ interface MastodonApi {
         excludeReplies: Boolean = false,
         onlyMedia: Boolean = false,
     ): List<MastodonStatusDto>
+
+    suspend fun search(
+        instanceUrl: String,
+        accessToken: String,
+        query: String,
+        type: String,
+        limit: Int = 20,
+    ): MastodonSearchDto
 
     suspend fun favouriteStatus(
         instanceUrl: String,

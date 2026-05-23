@@ -24,6 +24,12 @@ interface MastodonRepository {
         account: Account,
     ): AppResult<MastodonProfile>
 
+    suspend fun search(
+        account: Account,
+        query: String,
+        category: MastodonSearchCategory,
+    ): AppResult<MastodonSearchResult>
+
     suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage = MastodonTimelinePage(),

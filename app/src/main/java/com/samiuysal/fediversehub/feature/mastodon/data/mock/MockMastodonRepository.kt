@@ -11,6 +11,9 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileField
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchAccount
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchResult
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -72,6 +75,43 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
             ),
         ),
     )
+
+    override suspend fun search(
+        account: Account,
+        query: String,
+        category: MastodonSearchCategory,
+    ): AppResult<MastodonSearchResult> {
+        val posts = MockMastodonData.homeTimeline.filter {
+            it.contentText.contains(query, ignoreCase = true) ||
+                it.authorDisplayName.contains(query, ignoreCase = true)
+        }.ifEmpty { MockMastodonData.homeTimeline.take(3) }
+        return AppResult.Success(
+            MastodonSearchResult(
+                posts = posts.takeIf { category == MastodonSearchCategory.POSTS }.orEmpty(),
+                accounts = if (category == MastodonSearchCategory.ACCOUNTS) {
+                    listOf(
+                        MastodonSearchAccount(
+                            id = "mock-account-1",
+                            displayName = "Fediverse Builder",
+                            username = "@builder@mastodon.social",
+                            avatarUrl = null,
+                            note = "Mock account result for UI testing.",
+                        ),
+                    )
+                } else {
+                    emptyList()
+                },
+                hashtags = if (category == MastodonSearchCategory.HASHTAGS) {
+                    listOf(
+                        com.samiuysal.fediversehub.feature.mastodon.domain.MastodonHashtag("#Android", null),
+                        com.samiuysal.fediversehub.feature.mastodon.domain.MastodonHashtag("#Fediverse", null),
+                    )
+                } else {
+                    emptyList()
+                },
+            ),
+        )
+    }
 
     override suspend fun getHomeTimeline(
         account: Account,

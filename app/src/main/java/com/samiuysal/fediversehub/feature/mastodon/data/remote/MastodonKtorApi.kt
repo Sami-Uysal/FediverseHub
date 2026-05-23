@@ -4,6 +4,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
@@ -145,6 +146,23 @@ class MastodonKtorApi @Inject constructor(
             parameter("exclude_replies", excludeReplies)
             parameter("only_media", onlyMedia)
             maxId?.let { parameter("max_id", it) }
+        }.body()
+    }
+
+    override suspend fun search(
+        instanceUrl: String,
+        accessToken: String,
+        query: String,
+        type: String,
+        limit: Int,
+    ): MastodonSearchDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v2/search") {
+            bearerAuth(accessToken)
+            parameter("q", query)
+            parameter("type", type)
+            parameter("limit", limit)
+            parameter("resolve", true)
         }.body()
     }
 
