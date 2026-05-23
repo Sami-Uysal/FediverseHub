@@ -48,6 +48,15 @@ class SwitchingMastodonRepository @Inject constructor(
     ): AppResult<MastodonSearchResult> =
         account.repository().search(account, query, category)
 
+    override suspend fun getTrendingStatuses(account: Account) =
+        account.repository().getTrendingStatuses(account)
+
+    override suspend fun getTrendingTags(account: Account) =
+        account.repository().getTrendingTags(account)
+
+    override suspend fun getTrendingLinks(account: Account) =
+        account.repository().getTrendingLinks(account)
+
     override suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage,

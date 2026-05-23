@@ -24,6 +24,16 @@ class MastodonTimelineRemoteMediator(
 ) : RemoteMediator<Int, MastodonPostWithMedia>() {
     private val dao = database.mastodonTimelineDao()
 
+    override suspend fun initialize(): InitializeAction {
+        val refreshedAt = dao.remoteKey(account.id)?.refreshedAt ?: return InitializeAction.LAUNCH_INITIAL_REFRESH
+        val cacheAge = System.currentTimeMillis() - refreshedAt
+        return if (cacheAge < CACHE_TTL_MILLIS) {
+            InitializeAction.SKIP_INITIAL_REFRESH
+        } else {
+            InitializeAction.LAUNCH_INITIAL_REFRESH
+        }
+    }
+
     override suspend fun load(
         loadType: LoadType,
         state: PagingState<Int, MastodonPostWithMedia>,
@@ -90,5 +100,9 @@ class MastodonTimelineRemoteMediator(
             if (throwable is CancellationException) throw throwable
             MediatorResult.Error(AppErrorException(NetworkErrorMapper.map(throwable)))
         }
+    }
+
+    private companion object {
+        const val CACHE_TTL_MILLIS = 2 * 60 * 1000L
     }
 }

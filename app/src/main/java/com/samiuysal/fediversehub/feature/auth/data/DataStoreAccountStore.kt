@@ -8,6 +8,7 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.auth.domain.MastodonOAuthSession
+import com.samiuysal.fediversehub.feature.auth.domain.PixelfedOAuthSession
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -97,6 +98,25 @@ class DataStoreAccountStore @Inject constructor(
         }
     }
 
+    override suspend fun readPendingPixelfedOAuthSession(): PixelfedOAuthSession? {
+        val preferences = context.authDataStore.data.first()
+        return preferences[PENDING_PIXELFED_OAUTH_JSON]?.let { value ->
+            runCatching { json.decodeFromString<PixelfedOAuthSession>(value) }.getOrNull()
+        }
+    }
+
+    override suspend fun savePendingPixelfedOAuthSession(session: PixelfedOAuthSession) {
+        context.authDataStore.edit { preferences ->
+            preferences[PENDING_PIXELFED_OAUTH_JSON] = json.encodeToString(session)
+        }
+    }
+
+    override suspend fun clearPendingPixelfedOAuthSession() {
+        context.authDataStore.edit { preferences ->
+            preferences.remove(PENDING_PIXELFED_OAUTH_JSON)
+        }
+    }
+
     private fun String.decodeStoredAccounts(): List<StoredAccount> =
         runCatching { json.decodeFromString<List<StoredAccount>>(this) }.getOrDefault(emptyList())
 
@@ -118,5 +138,6 @@ class DataStoreAccountStore @Inject constructor(
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
         val ACTIVE_ACCOUNTS_JSON = stringPreferencesKey("active_accounts_json")
         val PENDING_MASTODON_OAUTH_JSON = stringPreferencesKey("pending_mastodon_oauth_json")
+        val PENDING_PIXELFED_OAUTH_JSON = stringPreferencesKey("pending_pixelfed_oauth_json")
     }
 }

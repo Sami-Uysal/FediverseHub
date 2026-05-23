@@ -24,7 +24,9 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelin
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchResult
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonHashtag
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTrendLink
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonProfileMapper
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonSearchMapper
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
@@ -137,6 +139,62 @@ class MastodonRepositoryImpl @Inject constructor(
                 type = category.apiType,
             )
             AppResult.Success(MastodonSearchMapper.dtoToDomain(result))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getTrendingStatuses(account: Account): AppResult<List<MastodonPost>> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            AppResult.Success(
+                mastodonApi.getTrendingStatuses(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = accessToken,
+                ).map(MastodonTimelineMapper::dtoToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getTrendingTags(account: Account): AppResult<List<MastodonHashtag>> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            AppResult.Success(
+                mastodonApi.getTrendingTags(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = accessToken,
+                ).map { MastodonHashtag(name = it.name, url = it.url) },
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getTrendingLinks(account: Account): AppResult<List<MastodonTrendLink>> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            AppResult.Success(
+                mastodonApi.getTrendingLinks(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = accessToken,
+                ).map {
+                    MastodonTrendLink(
+                        url = it.url.orEmpty(),
+                        title = it.title,
+                        description = it.description,
+                        imageUrl = it.image,
+                        providerName = it.providerName,
+                    )
+                }.filter { it.url.isNotBlank() },
+            )
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }

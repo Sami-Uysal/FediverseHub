@@ -5,6 +5,8 @@ import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonHashtagDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonPreviewCardDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
@@ -74,6 +76,24 @@ interface MastodonApi {
         type: String,
         limit: Int = 20,
     ): MastodonSearchDto
+
+    suspend fun getTrendingStatuses(
+        instanceUrl: String,
+        accessToken: String,
+        limit: Int = 20,
+    ): List<MastodonStatusDto>
+
+    suspend fun getTrendingTags(
+        instanceUrl: String,
+        accessToken: String,
+        limit: Int = 20,
+    ): List<MastodonHashtagDto>
+
+    suspend fun getTrendingLinks(
+        instanceUrl: String,
+        accessToken: String,
+        limit: Int = 20,
+    ): List<MastodonPreviewCardDto>
 
     suspend fun favouriteStatus(
         instanceUrl: String,

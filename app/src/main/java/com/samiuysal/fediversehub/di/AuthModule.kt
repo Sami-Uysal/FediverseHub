@@ -2,8 +2,10 @@ package com.samiuysal.fediversehub.di
 
 import com.samiuysal.fediversehub.feature.auth.data.DataStoreAccountStore
 import com.samiuysal.fediversehub.feature.auth.data.MastodonAuthRepositoryImpl
+import com.samiuysal.fediversehub.feature.auth.data.PixelfedAuthRepositoryImpl
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.auth.domain.MastodonAuthRepository
+import com.samiuysal.fediversehub.feature.auth.domain.PixelfedAuthRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -24,4 +26,10 @@ abstract class AuthModule {
     abstract fun bindMastodonAuthRepository(
         repository: MastodonAuthRepositoryImpl,
     ): MastodonAuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPixelfedAuthRepository(
+        repository: PixelfedAuthRepositoryImpl,
+    ): PixelfedAuthRepository
 }

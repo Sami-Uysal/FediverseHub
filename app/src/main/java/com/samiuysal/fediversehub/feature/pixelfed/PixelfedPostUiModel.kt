@@ -9,8 +9,12 @@ data class PixelfedPostUiModel(
     val username: String,
     val avatarUrl: String?,
     val imageUrl: String,
+    val fullImageUrls: List<String> = listOf(imageUrl),
+    val altFlags: List<Boolean> = emptyList(),
     val caption: String,
     val likes: Int,
     val comments: Int,
     val timeAgo: String,
+    val isLiked: Boolean = false,
+    val isLoadingLike: Boolean = false,
 )

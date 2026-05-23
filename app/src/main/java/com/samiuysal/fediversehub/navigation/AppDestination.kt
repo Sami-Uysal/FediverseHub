@@ -12,7 +12,7 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppBottomNavItem
 object AppDestination {
     const val HOME = "home"
     const val SEARCH = "search"
-    const val CREATE = "create"
+    const val EXPLORE = "explore"
     const val NOTIFICATIONS = "notifications"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
@@ -32,7 +32,7 @@ object AppDestination {
     val bottomNavItems = listOf(
         AppBottomNavItem(HOME, "Home", Icons.Outlined.Home),
         AppBottomNavItem(SEARCH, "Search", Icons.Outlined.Search),
-        AppBottomNavItem(CREATE, "Discover", Icons.Outlined.Explore),
+        AppBottomNavItem(EXPLORE, "Keşfet", Icons.Outlined.Explore),
         AppBottomNavItem(NOTIFICATIONS, "Notifications", Icons.Outlined.Notifications),
         AppBottomNavItem(PROFILE, "Profile", Icons.Outlined.Person),
     )

@@ -3,7 +3,9 @@ package com.samiuysal.fediversehub.feature.mastodon.data.remote
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonHashtagDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonPreviewCardDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
@@ -163,6 +165,42 @@ class MastodonKtorApi @Inject constructor(
             parameter("type", type)
             parameter("limit", limit)
             parameter("resolve", true)
+        }.body()
+    }
+
+    override suspend fun getTrendingStatuses(
+        instanceUrl: String,
+        accessToken: String,
+        limit: Int,
+    ): List<MastodonStatusDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/trends/statuses") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun getTrendingTags(
+        instanceUrl: String,
+        accessToken: String,
+        limit: Int,
+    ): List<MastodonHashtagDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/trends/tags") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun getTrendingLinks(
+        instanceUrl: String,
+        accessToken: String,
+        limit: Int,
+    ): List<MastodonPreviewCardDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/trends/links") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
         }.body()
     }
 

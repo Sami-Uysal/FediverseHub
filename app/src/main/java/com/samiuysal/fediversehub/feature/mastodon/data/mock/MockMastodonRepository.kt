@@ -11,10 +11,12 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileField
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonHashtag
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchAccount
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchResult
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTrendLink
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 
@@ -117,6 +119,39 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
         account: Account,
         page: MastodonTimelinePage,
     ): AppResult<List<MastodonPost>> = AppResult.Success(MockMastodonData.homeTimeline)
+
+    override suspend fun getTrendingStatuses(account: Account): AppResult<List<MastodonPost>> =
+        AppResult.Success(MockMastodonData.homeTimeline.take(8))
+
+    override suspend fun getTrendingTags(account: Account): AppResult<List<MastodonHashtag>> =
+        AppResult.Success(
+            listOf(
+                MastodonHashtag("Android", null),
+                MastodonHashtag("Fediverse", null),
+                MastodonHashtag("Kotlin", null),
+                MastodonHashtag("Compose", null),
+            ),
+        )
+
+    override suspend fun getTrendingLinks(account: Account): AppResult<List<MastodonTrendLink>> =
+        AppResult.Success(
+            listOf(
+                MastodonTrendLink(
+                    url = "https://developer.android.com",
+                    title = "Android Developers",
+                    description = "Build modern Android apps.",
+                    imageUrl = null,
+                    providerName = "developer.android.com",
+                ),
+                MastodonTrendLink(
+                    url = "https://joinmastodon.org",
+                    title = "Mastodon",
+                    description = "Social networking back in your hands.",
+                    imageUrl = null,
+                    providerName = "joinmastodon.org",
+                ),
+            ),
+        )
 
     override suspend fun getPostDetail(
         account: Account,

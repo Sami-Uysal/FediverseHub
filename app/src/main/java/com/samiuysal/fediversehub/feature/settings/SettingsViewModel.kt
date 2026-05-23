@@ -6,6 +6,7 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.auth.domain.MastodonAuthRepository
+import com.samiuysal.fediversehub.feature.auth.domain.PixelfedAuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel @Inject constructor(
     private val accountStore: AccountStore,
     private val mastodonAuthRepository: MastodonAuthRepository,
+    private val pixelfedAuthRepository: PixelfedAuthRepository,
 ) : ViewModel() {
     val accounts: StateFlow<List<Account>> =
         accountStore.accounts.stateIn(
@@ -27,10 +29,10 @@ class SettingsViewModel @Inject constructor(
 
     fun logout(account: Account) {
         viewModelScope.launch {
-            if (account.platform == PlatformType.MASTODON) {
-                mastodonAuthRepository.logout(account.id)
-            } else {
-                accountStore.removeAccount(account.id)
+            when (account.platform) {
+                PlatformType.MASTODON -> mastodonAuthRepository.logout(account.id)
+                PlatformType.PIXELFED -> pixelfedAuthRepository.logout(account.id)
+                PlatformType.LEMMY -> accountStore.removeAccount(account.id)
             }
         }
     }

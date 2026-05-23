@@ -2,6 +2,7 @@ package com.samiuysal.fediversehub.feature.profile
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -43,8 +44,8 @@ fun ProfilePlatformTopBar(
                 PlatformSwitcher(
                     selectedPlatform = selectedPlatform,
                     onPlatformSelected = onPlatformSelected,
-                    modifier = Modifier.weight(1f, fill = false),
                 )
+                Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Outlined.Settings,

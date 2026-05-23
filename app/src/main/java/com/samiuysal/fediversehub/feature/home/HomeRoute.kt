@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
+import com.samiuysal.fediversehub.core.designsystem.component.AppButton
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.model.Account
@@ -37,6 +41,8 @@ import com.samiuysal.fediversehub.feature.mastodon.MastodonHomeScreenContent
 import com.samiuysal.fediversehub.feature.mastodon.MastodonNewPostComposeSheet
 import com.samiuysal.fediversehub.feature.mastodon.MastodonReplyComposeSheet
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreen
+import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreenContent
+import com.samiuysal.fediversehub.feature.pixelfed.PixelfedCommentsSheet
 
 @Composable
 fun HomeRoute(
@@ -51,6 +57,8 @@ fun HomeRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val mastodonActionOverrides by viewModel.mastodonActionOverrides.collectAsStateWithLifecycle()
+    val pixelfedActionOverrides by viewModel.pixelfedActionOverrides.collectAsStateWithLifecycle()
+    val pixelfedCommentsState by viewModel.pixelfedCommentsState.collectAsStateWithLifecycle()
     val replyComposeState by viewModel.replyComposeState.collectAsStateWithLifecycle()
     val newPostComposeState by viewModel.newPostComposeState.collectAsStateWithLifecycle()
 
@@ -75,17 +83,25 @@ fun HomeRoute(
         onPlatformSelected = onPlatformSelected,
         onComposerClick = viewModel::openNewPostCompose,
         mastodonContent = { modifier ->
-            val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
-            MastodonHomeScreen(
-                account = uiState.selectedAccount,
-                posts = mastodonTimeline,
-                actionOverrides = mastodonActionOverrides,
-                modifier = modifier,
-                showTopBar = false,
-                onPostClick = onMastodonPostSelected,
-                onMediaClick = onMastodonMediaSelected,
-                onPostAction = viewModel::onMastodonAction,
-            )
+            if (uiState.selectedAccount?.accessToken.isNullOrBlank()) {
+                NoAccountHomeCta(
+                    platform = PlatformType.MASTODON,
+                    modifier = modifier,
+                    onLoginClick = onMastodonUnauthorized,
+                )
+            } else {
+                val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
+                MastodonHomeScreen(
+                    account = uiState.selectedAccount,
+                    posts = mastodonTimeline,
+                    actionOverrides = mastodonActionOverrides,
+                    modifier = modifier,
+                    showTopBar = false,
+                    onPostClick = onMastodonPostSelected,
+                    onMediaClick = onMastodonMediaSelected,
+                    onPostAction = viewModel::onMastodonAction,
+                )
+            }
         },
         lemmyContent = { modifier ->
             val lemmyPosts = viewModel.lemmyPosts.collectAsLazyPagingItems()
@@ -97,12 +113,25 @@ fun HomeRoute(
             )
         },
         pixelfedContent = { modifier ->
-            PixelfedHomeScreen(
-                account = uiState.selectedAccount,
-                posts = uiState.pixelfedPosts,
-                modifier = modifier,
-                showTopBar = false,
-            )
+            if (uiState.selectedAccount?.accessToken.isNullOrBlank()) {
+                NoAccountHomeCta(
+                    platform = PlatformType.PIXELFED,
+                    modifier = modifier,
+                    onLoginClick = onMastodonUnauthorized,
+                )
+            } else {
+                val pixelfedPosts = viewModel.pixelfedFeed.collectAsLazyPagingItems()
+                PixelfedHomeScreen(
+                    account = uiState.selectedAccount,
+                    posts = pixelfedPosts,
+                    actionOverrides = pixelfedActionOverrides,
+                    modifier = modifier,
+                    showTopBar = false,
+                    onMediaClick = onMastodonMediaSelected,
+                    onLikeClick = viewModel::onPixelfedLike,
+                    onCommentsClick = viewModel::openPixelfedComments,
+                )
+            }
         },
     )
 
@@ -124,6 +153,13 @@ fun HomeRoute(
             onContentWarningChanged = viewModel::onNewPostContentWarningChanged,
             onDismiss = viewModel::dismissNewPostCompose,
             onSend = viewModel::submitNewPost,
+        )
+    }
+
+    pixelfedCommentsState?.let { state ->
+        PixelfedCommentsSheet(
+            state = state,
+            onDismiss = viewModel::dismissPixelfedComments,
         )
     }
 }
@@ -158,6 +194,39 @@ fun HomeScreenContent(
             PlatformType.LEMMY -> lemmyContent(Modifier.weight(1f))
             PlatformType.PIXELFED -> pixelfedContent(Modifier.weight(1f))
         }
+    }
+}
+
+@Composable
+private fun NoAccountHomeCta(
+    platform: PlatformType,
+    onLoginClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(AppSpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "${platform.label} hesabı bağlı değil",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(AppSpacing.sm))
+        Text(
+            text = "${platform.label} feed'i görmek için önce giriş yap.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(AppSpacing.lg))
+        AppButton(
+            text = "${platform.label}'e giriş yap",
+            icon = Icons.AutoMirrored.Outlined.Login,
+            onClick = onLoginClick,
+        )
     }
 }
 
@@ -235,6 +304,13 @@ private val PlatformType.composerPlaceholder: String
         PlatformType.PIXELFED -> "Bir fotoğraf paylaş..."
     }
 
+private val PlatformType.label: String
+    get() = when (this) {
+        PlatformType.MASTODON -> "Mastodon"
+        PlatformType.LEMMY -> "Lemmy"
+        PlatformType.PIXELFED -> "Pixelfed"
+    }
+
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun HomeScreenContentPreview() {
@@ -262,7 +338,7 @@ fun HomeScreenContentPreview() {
                 )
             },
             pixelfedContent = { modifier ->
-                PixelfedHomeScreen(
+                PixelfedHomeScreenContent(
                     account = state.selectedAccount,
                     posts = state.pixelfedPosts,
                     modifier = modifier,

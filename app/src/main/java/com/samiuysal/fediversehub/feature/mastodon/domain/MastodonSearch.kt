@@ -19,6 +19,14 @@ data class MastodonHashtag(
     val url: String?,
 )
 
+data class MastodonTrendLink(
+    val url: String,
+    val title: String,
+    val description: String?,
+    val imageUrl: String?,
+    val providerName: String?,
+)
+
 enum class MastodonSearchCategory(val apiType: String) {
     POSTS("statuses"),
     ACCOUNTS("accounts"),

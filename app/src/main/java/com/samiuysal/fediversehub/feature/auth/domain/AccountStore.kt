@@ -14,4 +14,7 @@ interface AccountStore {
     suspend fun readPendingMastodonOAuthSession(): MastodonOAuthSession?
     suspend fun savePendingMastodonOAuthSession(session: MastodonOAuthSession)
     suspend fun clearPendingMastodonOAuthSession()
+    suspend fun readPendingPixelfedOAuthSession(): PixelfedOAuthSession?
+    suspend fun savePendingPixelfedOAuthSession(session: PixelfedOAuthSession)
+    suspend fun clearPendingPixelfedOAuthSession()
 }

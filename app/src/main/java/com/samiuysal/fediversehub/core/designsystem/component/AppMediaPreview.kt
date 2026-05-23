@@ -80,7 +80,7 @@ fun AppMediaPreview(
             val request = remember(context, item.previewUrl) {
                 ImageRequest.Builder(context)
                     .data(item.previewUrl)
-                    .size(520, 304)
+                    .size(420, 244)
                     .precision(Precision.INEXACT)
                     .crossfade(false)
                     .memoryCachePolicy(CachePolicy.ENABLED)

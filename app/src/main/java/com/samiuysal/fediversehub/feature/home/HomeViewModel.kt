@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
+import android.util.Log
 import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
@@ -22,6 +23,10 @@ import com.samiuysal.fediversehub.feature.mastodon.MastodonVisibility
 import com.samiuysal.fediversehub.feature.mastodon.canSend
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
+import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
+import com.samiuysal.fediversehub.feature.pixelfed.PixelfedCommentsState
+import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedRepository
+import com.samiuysal.fediversehub.feature.pixelfed.mapper.PixelfedMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +38,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -47,6 +54,7 @@ import kotlinx.coroutines.launch
 class HomeViewModel @Inject constructor(
     private val mastodonRepository: MastodonRepository,
     private val lemmyRepository: LemmyRepository,
+    private val pixelfedRepository: PixelfedRepository,
     private val accountStore: AccountStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MockFediverseData.homeState)
@@ -60,6 +68,12 @@ class HomeViewModel @Inject constructor(
     val replyComposeState: StateFlow<MastodonReplyComposeState?> = _replyComposeState.asStateFlow()
     private val _newPostComposeState = MutableStateFlow<MastodonNewPostComposeState?>(null)
     val newPostComposeState: StateFlow<MastodonNewPostComposeState?> = _newPostComposeState.asStateFlow()
+    private val _pixelfedActionOverrides = MutableStateFlow<Map<String, PixelfedPostUiModel>>(emptyMap())
+    val pixelfedActionOverrides: StateFlow<Map<String, PixelfedPostUiModel>> =
+        _pixelfedActionOverrides.asStateFlow()
+    private val _pixelfedCommentsState = MutableStateFlow<PixelfedCommentsState?>(null)
+    val pixelfedCommentsState: StateFlow<PixelfedCommentsState?> =
+        _pixelfedCommentsState.asStateFlow()
 
     val mastodonTimeline: Flow<PagingData<MastodonPostUiModel>> =
         uiState
@@ -89,11 +103,40 @@ class HomeViewModel @Inject constructor(
             }
             .cachedIn(viewModelScope)
 
+    val pixelfedFeed: Flow<PagingData<PixelfedPostUiModel>> =
+        uiState
+            .map { state ->
+                state.activeAccount(PlatformType.PIXELFED)
+                    ?.takeIf { !it.accessToken.isNullOrBlank() }
+            }
+            .distinctUntilChanged()
+            .flatMapLatest { account ->
+                if (account == null) {
+                    Log.d(TAG, "Pixelfed home skipped: no active token account")
+                    flowOf(PagingData.empty())
+                } else {
+                    Log.d(
+                        TAG,
+                        "Pixelfed home loading: account=${account.id}, instance=${account.instanceUrl}, token=true",
+                    )
+                    pixelfedRepository
+                        .getHomeFeedPagingData(account)
+                        .map { pagingData -> pagingData.map(PixelfedMapper::postToUi) }
+                }
+            }
+            .flowOn(Dispatchers.Default)
+            .cachedIn(viewModelScope)
+
     init {
-        accountStore.accounts
-            .onEach { storedAccounts ->
+        combine(accountStore.accounts, accountStore.activeAccountIds) { storedAccounts, activeAccountIds ->
+            storedAccounts to activeAccountIds
+        }
+            .onEach { (storedAccounts, activeAccountIds) ->
                 _uiState.update { state ->
-                    state.copy(accounts = mergeAccounts(storedAccounts))
+                    state.copy(
+                        accounts = mergeAccounts(storedAccounts),
+                        activeAccountIds = activeAccountIds,
+                    )
                 }
             }
             .launchIn(viewModelScope)
@@ -285,6 +328,65 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun onPixelfedLike(post: PixelfedPostUiModel) {
+        val account = _uiState.value.activeAccount(PlatformType.PIXELFED)
+            ?: return
+        val before = _pixelfedActionOverrides.value[post.id] ?: post
+        val optimistic = before.copy(
+            isLiked = !before.isLiked,
+            likes = (before.likes + if (!before.isLiked) 1 else -1).coerceAtLeast(0),
+            isLoadingLike = true,
+        )
+        setPixelfedOverride(optimistic)
+        viewModelScope.launch {
+            when (
+                val result = pixelfedRepository.setLiked(
+                    account = account,
+                    postId = post.id,
+                    liked = optimistic.isLiked,
+                )
+            ) {
+                is AppResult.Success -> {
+                    setPixelfedOverride(
+                        PixelfedMapper.postToUi(result.data).copy(isLoadingLike = false),
+                    )
+                }
+                is AppResult.Failure -> {
+                    setPixelfedOverride(before.copy(isLoadingLike = false))
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                    }
+                }
+            }
+        }
+    }
+
+    fun openPixelfedComments(post: PixelfedPostUiModel) {
+        val account = _uiState.value.activeAccount(PlatformType.PIXELFED)
+            ?: return
+        _pixelfedCommentsState.value = PixelfedCommentsState(postId = post.id, isLoading = true)
+        viewModelScope.launch {
+            when (val result = pixelfedRepository.getComments(account, post.id)) {
+                is AppResult.Success -> {
+                    _pixelfedCommentsState.value = PixelfedCommentsState(
+                        postId = post.id,
+                        comments = result.data,
+                    )
+                }
+                is AppResult.Failure -> {
+                    _pixelfedCommentsState.value = PixelfedCommentsState(
+                        postId = post.id,
+                        errorMessage = result.error.userMessage("Comments failed."),
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissPixelfedComments() {
+        _pixelfedCommentsState.value = null
+    }
+
     private fun mergeAccounts(storedAccounts: List<Account>): List<Account> {
         val fallbackAccounts = MockFediverseData.homeState.accounts
             .filterNot { fallback ->
@@ -305,6 +407,12 @@ class HomeViewModel @Inject constructor(
     private fun setMastodonOverride(post: MastodonPostUiModel) {
         _mastodonActionOverrides.update { overrides ->
             overrides + (post.id to post) + (post.detailId to post)
+        }
+    }
+
+    private fun setPixelfedOverride(post: PixelfedPostUiModel) {
+        _pixelfedActionOverrides.update { overrides ->
+            overrides + (post.id to post)
         }
     }
 
@@ -332,6 +440,14 @@ class HomeViewModel @Inject constructor(
         is AppError.Unknown -> message ?: "Post could not be sent. Try again."
     }
 
+    private fun AppError.userMessage(fallback: String): String = when (this) {
+        AppError.Unauthorized -> "Session expired. Log in again."
+        AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
+        AppError.Network -> "Network failed. Check your connection and retry."
+        is AppError.Server -> "Server error $code. Try again shortly."
+        is AppError.Unknown -> message ?: fallback
+    }
+
     private fun MastodonPostUiModel.optimistic(action: MastodonPostActionType): MastodonPostUiModel =
         when (action) {
             MastodonPostActionType.REPLY -> this
@@ -356,6 +472,10 @@ class HomeViewModel @Inject constructor(
         isFavourited = confirmed.isFavourited,
         isBookmarked = confirmed.isBookmarked,
     )
+
+    private companion object {
+        const val TAG = "HomeViewModel"
+    }
 }
 
 sealed interface HomeEffect {

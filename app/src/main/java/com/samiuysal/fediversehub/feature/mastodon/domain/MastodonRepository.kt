@@ -30,6 +30,10 @@ interface MastodonRepository {
         category: MastodonSearchCategory,
     ): AppResult<MastodonSearchResult>
 
+    suspend fun getTrendingStatuses(account: Account): AppResult<List<MastodonPost>>
+    suspend fun getTrendingTags(account: Account): AppResult<List<MastodonHashtag>>
+    suspend fun getTrendingLinks(account: Account): AppResult<List<MastodonTrendLink>>
+
     suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage = MastodonTimelinePage(),

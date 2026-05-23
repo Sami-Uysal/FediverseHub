@@ -7,13 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppCard
@@ -22,24 +21,19 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppLoading
 import com.samiuysal.fediversehub.core.designsystem.component.AppSecondaryButton
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
-import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.model.Account
-import com.samiuysal.fediversehub.core.model.PlatformType
 
 @Composable
-fun MastodonAuthScreen(
-    uiState: MastodonAuthUiState,
-    onEvent: (MastodonAuthUiEvent) -> Unit,
+fun PixelfedAuthScreen(
+    uiState: PixelfedAuthUiState,
+    onEvent: (PixelfedAuthUiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
         AppTopBar(
-            title = "Mastodon account",
-            subtitle = "OAuth login setup",
+            title = "Pixelfed account",
+            subtitle = "Photo-first fediverse login",
         )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -49,28 +43,28 @@ fun MastodonAuthScreen(
             uiState.errorMessage?.let { message ->
                 AppErrorState(
                     message = message,
-                    onRetry = { onEvent(MastodonAuthUiEvent.LoginClicked) },
+                    onRetry = { onEvent(PixelfedAuthUiEvent.LoginClicked) },
                     modifier = Modifier.height(160.dp),
                 )
             }
 
             if (uiState.account != null) {
-                MastodonAccountPanel(
+                PixelfedAccountPanel(
                     account = uiState.account,
                     isLoading = uiState.isLoading,
-                    onLogout = { onEvent(MastodonAuthUiEvent.LogoutClicked) },
+                    onLogout = { onEvent(PixelfedAuthUiEvent.LogoutClicked) },
                 )
             } else {
                 AuthConnectCard(
-                    title = "Connect your Mastodon instance",
-                    description = "Sign in with your home instance to load timeline, notifications, profile and actions.",
+                    title = "Connect your Pixelfed instance",
+                    description = "Sign in with the instance where your photos live. This account stays separate from Mastodon and Lemmy.",
                     instanceUrl = uiState.instanceUrl,
-                    instanceHint = "Example: mastodon.social or mastodon.world",
-                    buttonText = "Continue with Mastodon",
-                    loadingMessage = "Preparing Mastodon OAuth...",
+                    instanceHint = "Example: pixelfed.social or pixelfed.de",
+                    buttonText = "Continue with Pixelfed",
+                    loadingMessage = "Preparing Pixelfed OAuth...",
                     isLoading = uiState.isLoading,
-                    onInstanceChanged = { onEvent(MastodonAuthUiEvent.InstanceUrlChanged(it)) },
-                    onLogin = { onEvent(MastodonAuthUiEvent.LoginClicked) },
+                    onInstanceChanged = { onEvent(PixelfedAuthUiEvent.InstanceUrlChanged(it)) },
+                    onLogin = { onEvent(PixelfedAuthUiEvent.LoginClicked) },
                 )
             }
         }
@@ -78,7 +72,7 @@ fun MastodonAuthScreen(
 }
 
 @Composable
-private fun MastodonAccountPanel(
+private fun PixelfedAccountPanel(
     account: Account,
     isLoading: Boolean,
     onLogout: () -> Unit,
@@ -114,37 +108,5 @@ private fun MastodonAccountPanel(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-    }
-}
-
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-fun MastodonAuthScreenPreview() {
-    FediverseHubTheme {
-        MastodonAuthScreen(
-            uiState = MastodonAuthUiState(),
-            onEvent = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-fun MastodonAuthLoggedInPreview() {
-    FediverseHubTheme {
-        MastodonAuthScreen(
-            uiState = MastodonAuthUiState(
-                account = Account(
-                    id = "mastodon-1",
-                    platform = PlatformType.MASTODON,
-                    instanceUrl = "mastodon.social",
-                    username = "sami",
-                    displayName = "Sami Uysal",
-                    avatarUrl = null,
-                    accessToken = null,
-                ),
-            ),
-            onEvent = {},
-        )
     }
 }

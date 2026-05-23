@@ -20,6 +20,7 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppScaffold
 import com.samiuysal.fediversehub.core.designsystem.theme.PlatformColors
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
+import com.samiuysal.fediversehub.feature.explore.ExploreRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
@@ -41,6 +42,10 @@ fun FediverseHubApp(
 
     LaunchedEffect(oauthCallbackUri) {
         if (oauthCallbackUri != null) {
+            when (oauthCallbackUri.path) {
+                "/mastodon" -> appStateViewModel.selectPlatform(PlatformType.MASTODON)
+                "/pixelfed" -> appStateViewModel.selectPlatform(PlatformType.PIXELFED)
+            }
             navController.navigate(AppDestination.PROFILE) {
                 launchSingleTop = true
             }
@@ -113,11 +118,20 @@ fun FediverseHubApp(
                     },
                 )
             }
-            composable(AppDestination.CREATE) {
-                PlaceholderRoute(
-                    title = "Create",
-                    message = "Composer will adapt to toot, Lemmy post/comment, or Pixelfed media publishing.",
+            composable(AppDestination.EXPLORE) {
+                ExploreRoute(
+                    selectedPlatform = appState.selectedPlatform,
+                    selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onHashtagSelected = { hashtag ->
+                        navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
+                    },
+                    onMediaSelected = { urls, altFlags, index ->
+                        navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
+                    },
                 )
             }
             composable(AppDestination.NOTIFICATIONS) {
@@ -145,6 +159,9 @@ fun FediverseHubApp(
                     onOAuthCallbackConsumed = onOAuthCallbackConsumed,
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onMediaSelected = { urls, altFlags, index ->
+                        navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
                     onPlatformSelected = appStateViewModel::selectPlatform,
                     onAccountSelected = appStateViewModel::selectAccount,

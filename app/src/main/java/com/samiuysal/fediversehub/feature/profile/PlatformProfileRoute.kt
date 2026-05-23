@@ -21,6 +21,7 @@ import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.mastodon.profile.MastodonProfileRoute
+import com.samiuysal.fediversehub.feature.pixelfed.profile.PixelfedProfileRoute
 
 @Composable
 fun PlatformProfileRoute(
@@ -31,6 +32,7 @@ fun PlatformProfileRoute(
     oauthCallbackUri: Uri?,
     onOAuthCallbackConsumed: () -> Unit,
     onPostSelected: (String) -> Unit,
+    onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     onPlatformSelected: (PlatformType) -> Unit,
     onAccountSelected: (Account) -> Unit,
     onSettingsClick: () -> Unit,
@@ -48,8 +50,19 @@ fun PlatformProfileRoute(
             onAccountSelected = onAccountSelected,
             onSettingsClick = onSettingsClick,
         )
-        PlatformType.LEMMY,
-        PlatformType.PIXELFED -> ComingSoonProfile(
+        PlatformType.PIXELFED -> PixelfedProfileRoute(
+            selectedPlatform = selectedPlatform,
+            platformAccounts = platformAccounts,
+            selectedAccount = selectedAccount,
+            contentPadding = contentPadding,
+            oauthCallbackUri = oauthCallbackUri,
+            onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+            onPlatformSelected = onPlatformSelected,
+            onAccountSelected = onAccountSelected,
+            onSettingsClick = onSettingsClick,
+            onMediaSelected = onMediaSelected,
+        )
+        PlatformType.LEMMY -> ComingSoonProfile(
             platform = selectedPlatform,
             platformAccounts = platformAccounts,
             account = selectedAccount,

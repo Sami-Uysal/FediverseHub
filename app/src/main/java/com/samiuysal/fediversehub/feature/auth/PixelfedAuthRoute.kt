@@ -9,19 +9,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun MastodonAuthRoute(
+fun PixelfedAuthRoute(
     oauthCallbackUri: Uri?,
     onOAuthCallbackConsumed: () -> Unit,
-    viewModel: MastodonAuthViewModel = hiltViewModel(),
+    viewModel: PixelfedAuthViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
 
     LaunchedEffect(oauthCallbackUri) {
         oauthCallbackUri
-            ?.takeIf { it.path == "/mastodon" }
+            ?.takeIf { it.path == "/pixelfed" }
             ?.let { uri ->
-                viewModel.onEvent(MastodonAuthUiEvent.OAuthCallbackReceived(uri.toString()))
+                viewModel.onEvent(PixelfedAuthUiEvent.OAuthCallbackReceived(uri.toString()))
                 onOAuthCallbackConsumed()
             }
     }
@@ -29,12 +29,12 @@ fun MastodonAuthRoute(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is MastodonAuthEffect.OpenAuthorizeUrl -> uriHandler.openUri(effect.url)
+                is PixelfedAuthEffect.OpenAuthorizeUrl -> uriHandler.openUri(effect.url)
             }
         }
     }
 
-    MastodonAuthScreen(
+    PixelfedAuthScreen(
         uiState = uiState,
         onEvent = viewModel::onEvent,
     )
