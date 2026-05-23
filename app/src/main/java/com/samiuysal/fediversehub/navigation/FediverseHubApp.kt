@@ -71,6 +71,11 @@ fun FediverseHubApp(
                     onMastodonMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
+                    onMastodonUnauthorized = {
+                        navController.navigate(AppDestination.PROFILE) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(AppDestination.SEARCH) {
@@ -127,6 +132,11 @@ fun FediverseHubApp(
                     onBack = navController::navigateUp,
                     onMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
+                    },
+                    onUnauthorized = {
+                        navController.navigate(AppDestination.PROFILE) {
+                            launchSingleTop = true
+                        }
                     },
                 )
             }

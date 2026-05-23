@@ -33,6 +33,35 @@ class SwitchingMastodonRepository @Inject constructor(
         postId: String,
     ) = account.repository().getPostDetail(account, postId)
 
+    override suspend fun setFavourite(
+        account: Account,
+        postId: String,
+        favourite: Boolean,
+    ): AppResult<MastodonPost> =
+        account.repository().setFavourite(account, postId, favourite)
+
+    override suspend fun setBoosted(
+        account: Account,
+        postId: String,
+        boosted: Boolean,
+    ): AppResult<MastodonPost> =
+        account.repository().setBoosted(account, postId, boosted)
+
+    override suspend fun setBookmarked(
+        account: Account,
+        postId: String,
+        bookmarked: Boolean,
+    ): AppResult<MastodonPost> =
+        account.repository().setBookmarked(account, postId, bookmarked)
+
+    override suspend fun replyToPost(
+        account: Account,
+        postId: String,
+        text: String,
+        visibility: String,
+    ): AppResult<MastodonPost> =
+        account.repository().replyToPost(account, postId, text, visibility)
+
     private fun Account.repository(): MastodonRepository =
         if (accessToken.isNullOrBlank()) mockRepository else realRepository
 }

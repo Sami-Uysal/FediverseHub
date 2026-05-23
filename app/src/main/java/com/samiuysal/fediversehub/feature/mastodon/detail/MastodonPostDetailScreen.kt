@@ -11,7 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +40,7 @@ import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.feature.mastodon.MastodonLinkPreviewUiModel
+import com.samiuysal.fediversehub.feature.mastodon.MastodonPostActionType
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
 import com.samiuysal.fediversehub.feature.mastodon.data.mock.MockMastodonData
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
@@ -47,6 +51,7 @@ fun MastodonPostDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -69,6 +74,7 @@ fun MastodonPostDetailScreen(
             is MastodonPostDetailUiState.Success -> MastodonPostDetailContent(
                 uiState = uiState,
                 onMediaSelected = onMediaSelected,
+                onPostAction = onPostAction,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -119,6 +125,7 @@ private fun MastodonPostDetailTopBar(
 private fun MastodonPostDetailContent(
     uiState: MastodonPostDetailUiState.Success,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val threadItems = remember(uiState) {
@@ -153,6 +160,7 @@ private fun MastodonPostDetailContent(
                 threadLineBottom = index < threadItems.lastIndex,
                 replyTarget = item.replyTarget(threadItems, index),
                 onMediaSelected = onMediaSelected,
+                onPostAction = onPostAction,
             )
         }
     }
@@ -165,13 +173,50 @@ private fun MastodonDetailPostCard(
     threadLineBottom: Boolean,
     replyTarget: String?,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
 ) {
     val post = item.post
-    val actions = remember(post.replies, post.boosts, post.favourites) {
+    val actions = remember(
+        post.replies,
+        post.boosts,
+        post.favourites,
+        post.isBoosted,
+        post.isFavourited,
+        post.isBookmarked,
+        post.loadingAction,
+    ) {
         listOf(
-            AppPostAction(Icons.Outlined.ChatBubbleOutline, post.replies.compactMetric(), "Replies"),
-            AppPostAction(Icons.Outlined.Repeat, post.boosts.compactMetric(), "Boosts"),
-            AppPostAction(Icons.Outlined.FavoriteBorder, post.favourites.compactMetric(), "Favourites"),
+            AppPostAction(
+                Icons.Outlined.ChatBubbleOutline,
+                post.replies.compactMetric(),
+                "Replies",
+                isLoading = post.loadingAction == MastodonPostActionType.REPLY,
+                onClick = { onPostAction(post, MastodonPostActionType.REPLY) },
+            ),
+            AppPostAction(
+                Icons.Outlined.Repeat,
+                post.boosts.compactMetric(),
+                "Boosts",
+                isHighlighted = post.isBoosted,
+                isLoading = post.loadingAction == MastodonPostActionType.BOOST,
+                onClick = { onPostAction(post, MastodonPostActionType.BOOST) },
+            ),
+            AppPostAction(
+                if (post.isFavourited) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                post.favourites.compactMetric(),
+                "Favourites",
+                isHighlighted = post.isFavourited,
+                isLoading = post.loadingAction == MastodonPostActionType.FAVOURITE,
+                onClick = { onPostAction(post, MastodonPostActionType.FAVOURITE) },
+            ),
+            AppPostAction(
+                if (post.isBookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                "",
+                "Bookmark",
+                isHighlighted = post.isBookmarked,
+                isLoading = post.loadingAction == MastodonPostActionType.BOOKMARK,
+                onClick = { onPostAction(post, MastodonPostActionType.BOOKMARK) },
+            ),
         )
     }
     val linkPreview = remember(post.linkPreview) { post.linkPreview?.toAppLinkPreview() }
@@ -282,6 +327,7 @@ fun MastodonPostDetailScreenPreview() {
             onBack = {},
             onRetry = {},
             onMediaSelected = { _, _, _ -> },
+            onPostAction = { _, _ -> },
         )
     }
 }

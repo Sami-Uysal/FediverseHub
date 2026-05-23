@@ -22,6 +22,11 @@ data class MastodonPostUiModel(
     val replies: Int,
     val boosts: Int,
     val favourites: Int,
+    val isBoosted: Boolean = false,
+    val isFavourited: Boolean = false,
+    val isBookmarked: Boolean = false,
+    val visibility: String = "public",
+    val loadingAction: MastodonPostActionType? = null,
 )
 
 @Immutable

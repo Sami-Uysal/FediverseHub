@@ -47,4 +47,48 @@ interface MastodonApi {
         accessToken: String,
         statusId: String,
     ): MastodonContextDto
+
+    suspend fun favouriteStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun unfavouriteStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun boostStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun unboostStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun bookmarkStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun unbookmarkStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto
+
+    suspend fun replyToStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+        text: String,
+        visibility: String,
+    ): MastodonStatusDto
 }

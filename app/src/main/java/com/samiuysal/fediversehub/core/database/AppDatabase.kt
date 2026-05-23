@@ -14,7 +14,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonTimelineDa
         MastodonMediaEntity::class,
         MastodonRemoteKeyEntity::class,
     ],
-    version = 3,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

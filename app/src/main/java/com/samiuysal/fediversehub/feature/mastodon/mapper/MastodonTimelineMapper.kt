@@ -38,6 +38,10 @@ object MastodonTimelineMapper {
             replyCount = status.repliesCount,
             reblogCount = status.reblogsCount,
             favouriteCount = status.favouritesCount,
+            isReblogged = status.reblogged,
+            isFavourited = status.favourited,
+            isBookmarked = status.bookmarked,
+            visibility = status.visibility,
             url = status.url ?: status.uri,
         )
     }
@@ -61,6 +65,10 @@ object MastodonTimelineMapper {
         replies = domain.replyCount,
         boosts = domain.reblogCount,
         favourites = domain.favouriteCount,
+        isBoosted = domain.isReblogged,
+        isFavourited = domain.isFavourited,
+        isBookmarked = domain.isBookmarked,
+        visibility = domain.visibility,
     )
 
     private fun MastodonMediaAttachment.toUi(): MastodonMediaUiModel =

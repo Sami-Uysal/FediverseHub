@@ -99,4 +99,85 @@ class MastodonRepositoryImpl @Inject constructor(
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }
     }
+
+    override suspend fun setFavourite(
+        account: Account,
+        postId: String,
+        favourite: Boolean,
+    ): AppResult<MastodonPost> = runStatusAction(account, postId) { token ->
+        if (favourite) {
+            mastodonApi.favouriteStatus(account.instanceUrl, token, postId)
+        } else {
+            mastodonApi.unfavouriteStatus(account.instanceUrl, token, postId)
+        }
+    }
+
+    override suspend fun setBoosted(
+        account: Account,
+        postId: String,
+        boosted: Boolean,
+    ): AppResult<MastodonPost> = runStatusAction(account, postId) { token ->
+        if (boosted) {
+            mastodonApi.boostStatus(account.instanceUrl, token, postId)
+        } else {
+            mastodonApi.unboostStatus(account.instanceUrl, token, postId)
+        }
+    }
+
+    override suspend fun setBookmarked(
+        account: Account,
+        postId: String,
+        bookmarked: Boolean,
+    ): AppResult<MastodonPost> = runStatusAction(account, postId) { token ->
+        if (bookmarked) {
+            mastodonApi.bookmarkStatus(account.instanceUrl, token, postId)
+        } else {
+            mastodonApi.unbookmarkStatus(account.instanceUrl, token, postId)
+        }
+    }
+
+    override suspend fun replyToPost(
+        account: Account,
+        postId: String,
+        text: String,
+        visibility: String,
+    ): AppResult<MastodonPost> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val dto = mastodonApi.replyToStatus(account.instanceUrl, accessToken, postId, text, visibility)
+            mastodonTimelineDao.incrementReplyCount(accountId = account.id, statusId = postId)
+            AppResult.Success(MastodonTimelineMapper.dtoToDomain(dto))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    private suspend fun runStatusAction(
+        account: Account,
+        postId: String,
+        action: suspend (String) -> com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto,
+    ): AppResult<MastodonPost> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val dto = action(accessToken)
+            val post = MastodonTimelineMapper.dtoToDomain(dto)
+            mastodonTimelineDao.updateStatusActions(
+                accountId = account.id,
+                statusId = postId,
+                replyCount = post.replyCount,
+                reblogCount = post.reblogCount,
+                favouriteCount = post.favouriteCount,
+                isReblogged = post.isReblogged,
+                isFavourited = post.isFavourited,
+                isBookmarked = post.isBookmarked,
+            )
+            AppResult.Success(post)
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
 }

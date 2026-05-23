@@ -39,4 +39,41 @@ interface MastodonTimelineDao {
 
     @Query("DELETE FROM mastodon_remote_keys WHERE accountId = :accountId")
     suspend fun clearRemoteKey(accountId: String)
+
+    @Query(
+        """
+        UPDATE mastodon_posts
+        SET replyCount = :replyCount,
+            reblogCount = :reblogCount,
+            favouriteCount = :favouriteCount,
+            isReblogged = :isReblogged,
+            isFavourited = :isFavourited,
+            isBookmarked = :isBookmarked
+        WHERE accountId = :accountId
+          AND (remoteId = :statusId OR statusRemoteId = :statusId)
+        """,
+    )
+    suspend fun updateStatusActions(
+        accountId: String,
+        statusId: String,
+        replyCount: Int,
+        reblogCount: Int,
+        favouriteCount: Int,
+        isReblogged: Boolean,
+        isFavourited: Boolean,
+        isBookmarked: Boolean,
+    )
+
+    @Query(
+        """
+        UPDATE mastodon_posts
+        SET replyCount = replyCount + 1
+        WHERE accountId = :accountId
+          AND (remoteId = :statusId OR statusRemoteId = :statusId)
+        """,
+    )
+    suspend fun incrementReplyCount(
+        accountId: String,
+        statusId: String,
+    )
 }

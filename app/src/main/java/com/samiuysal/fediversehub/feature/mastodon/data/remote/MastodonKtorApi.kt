@@ -114,6 +114,76 @@ class MastodonKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun favouriteStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto = postStatusAction(instanceUrl, accessToken, statusId, "favourite")
+
+    override suspend fun unfavouriteStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto = postStatusAction(instanceUrl, accessToken, statusId, "unfavourite")
+
+    override suspend fun boostStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto = postStatusAction(instanceUrl, accessToken, statusId, "reblog")
+
+    override suspend fun unboostStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto = postStatusAction(instanceUrl, accessToken, statusId, "unreblog")
+
+    override suspend fun bookmarkStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto = postStatusAction(instanceUrl, accessToken, statusId, "bookmark")
+
+    override suspend fun unbookmarkStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+    ): MastodonStatusDto = postStatusAction(instanceUrl, accessToken, statusId, "unbookmark")
+
+    override suspend fun replyToStatus(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+        text: String,
+        visibility: String,
+    ): MastodonStatusDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v1/statuses") {
+            bearerAuth(accessToken)
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("status", text)
+                        append("in_reply_to_id", statusId)
+                        append("visibility", visibility)
+                    },
+                ),
+            )
+        }.body()
+    }
+
+    private suspend fun postStatusAction(
+        instanceUrl: String,
+        accessToken: String,
+        statusId: String,
+        action: String,
+    ): MastodonStatusDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v1/statuses/$statusId/$action") {
+            bearerAuth(accessToken)
+        }.body()
+    }
+
     private fun String.normalizedHttpsBaseUrl(): String {
         val trimmed = trim().trimEnd('/')
         return when {

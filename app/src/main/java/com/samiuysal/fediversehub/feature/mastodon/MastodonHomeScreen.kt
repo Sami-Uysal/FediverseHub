@@ -16,8 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -61,10 +64,12 @@ import com.samiuysal.fediversehub.feature.home.MockFediverseData
 fun MastodonHomeScreen(
     account: Account?,
     posts: LazyPagingItems<MastodonPostUiModel>,
+    actionOverrides: Map<String, MastodonPostUiModel> = emptyMap(),
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     onPostClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit = { _, _ -> },
 ) {
     val isInitialLoading by remember(posts) {
         derivedStateOf {
@@ -100,8 +105,10 @@ fun MastodonHomeScreen(
             )
             else -> MastodonTimelineList(
                 posts = posts,
+                actionOverrides = actionOverrides,
                 onPostClick = onPostClick,
                 onMediaClick = onMediaClick,
+                onPostAction = onPostAction,
             )
         }
     }
@@ -111,6 +118,7 @@ fun MastodonHomeScreen(
 fun MastodonHomeScreenContent(
     account: Account?,
     posts: List<MastodonPostUiModel>,
+    actionOverrides: Map<String, MastodonPostUiModel> = emptyMap(),
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     errorMessage: String? = null,
@@ -119,6 +127,7 @@ fun MastodonHomeScreenContent(
     showTopBar: Boolean = true,
     onPostClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit = { _, _ -> },
 ) {
     Column(modifier = modifier) {
         if (showTopBar) {
@@ -139,8 +148,10 @@ fun MastodonHomeScreenContent(
             )
             else -> MastodonTimelineList(
                 posts = posts,
+                actionOverrides = actionOverrides,
                 onPostClick = onPostClick,
                 onMediaClick = onMediaClick,
+                onPostAction = onPostAction,
             )
         }
     }
@@ -176,8 +187,10 @@ private fun MastodonTopBar(
 @Composable
 private fun MastodonTimelineList(
     posts: List<MastodonPostUiModel>,
+    actionOverrides: Map<String, MastodonPostUiModel>,
     onPostClick: (String) -> Unit,
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -194,10 +207,12 @@ private fun MastodonTimelineList(
             key = { it.id },
             contentType = { "mastodon-post" },
         ) { post ->
+            val renderedPost = post.withActionOverride(actionOverrides)
             MastodonTimelinePost(
-                post = post,
-                onClick = { onPostClick(post.detailId) },
+                post = renderedPost,
+                onClick = { onPostClick(renderedPost.detailId) },
                 onMediaClick = onMediaClick,
+                onPostAction = onPostAction,
             )
         }
     }
@@ -206,8 +221,10 @@ private fun MastodonTimelineList(
 @Composable
 private fun MastodonTimelineList(
     posts: LazyPagingItems<MastodonPostUiModel>,
+    actionOverrides: Map<String, MastodonPostUiModel>,
     onPostClick: (String) -> Unit,
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -228,10 +245,12 @@ private fun MastodonTimelineList(
             if (post == null) {
                 MastodonPostSkeleton()
             } else {
+                val renderedPost = post.withActionOverride(actionOverrides)
                 MastodonTimelinePost(
-                    post = post,
-                    onClick = { onPostClick(post.detailId) },
+                    post = renderedPost,
+                    onClick = { onPostClick(renderedPost.detailId) },
                     onMediaClick = onMediaClick,
+                    onPostAction = onPostAction,
                 )
             }
         }
@@ -260,23 +279,48 @@ private fun MastodonTimelinePost(
     post: MastodonPostUiModel,
     onClick: () -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
+    onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit = { _, _ -> },
 ) {
-    val actions = remember(post.replies, post.boosts, post.favourites) {
+    val actions = remember(
+        post.replies,
+        post.boosts,
+        post.favourites,
+        post.isBoosted,
+        post.isFavourited,
+        post.isBookmarked,
+        post.loadingAction,
+    ) {
         listOf(
             AppPostAction(
                 icon = Icons.Outlined.ChatBubbleOutline,
                 count = post.replies.compactMetric(),
                 contentDescription = "Replies",
+                isLoading = post.loadingAction == MastodonPostActionType.REPLY,
+                onClick = { onPostAction(post, MastodonPostActionType.REPLY) },
             ),
             AppPostAction(
                 icon = Icons.Outlined.Repeat,
                 count = post.boosts.compactMetric(),
                 contentDescription = "Boosts",
+                isHighlighted = post.isBoosted,
+                isLoading = post.loadingAction == MastodonPostActionType.BOOST,
+                onClick = { onPostAction(post, MastodonPostActionType.BOOST) },
             ),
             AppPostAction(
-                icon = Icons.Outlined.FavoriteBorder,
+                icon = if (post.isFavourited) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
                 count = post.favourites.compactMetric(),
                 contentDescription = "Favourites",
+                isHighlighted = post.isFavourited,
+                isLoading = post.loadingAction == MastodonPostActionType.FAVOURITE,
+                onClick = { onPostAction(post, MastodonPostActionType.FAVOURITE) },
+            ),
+            AppPostAction(
+                icon = if (post.isBookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                count = "",
+                contentDescription = "Bookmark",
+                isHighlighted = post.isBookmarked,
+                isLoading = post.loadingAction == MastodonPostActionType.BOOKMARK,
+                onClick = { onPostAction(post, MastodonPostActionType.BOOKMARK) },
             ),
         )
     }
@@ -420,6 +464,10 @@ private fun Int.compactMetric(): String = when {
 
 private fun Throwable?.timelineMessage(): String =
     (this as? AppErrorException)?.message ?: "Timeline could not be loaded. Pull to refresh or try again."
+
+private fun MastodonPostUiModel.withActionOverride(
+    overrides: Map<String, MastodonPostUiModel>,
+): MastodonPostUiModel = overrides[detailId] ?: overrides[id] ?: this
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

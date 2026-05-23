@@ -35,6 +35,10 @@ data class MastodonPostEntity(
     val replyCount: Int,
     val reblogCount: Int,
     val favouriteCount: Int,
+    val isReblogged: Boolean,
+    val isFavourited: Boolean,
+    val isBookmarked: Boolean,
+    val visibility: String,
     val timelinePosition: Long,
     val cachedAt: Long,
 )

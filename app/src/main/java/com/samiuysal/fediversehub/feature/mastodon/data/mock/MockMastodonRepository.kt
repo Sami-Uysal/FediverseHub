@@ -43,4 +43,51 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
             ),
         )
     }
+
+    override suspend fun setFavourite(
+        account: Account,
+        postId: String,
+        favourite: Boolean,
+    ): AppResult<MastodonPost> = AppResult.Success(
+        post(postId).copy(
+            isFavourited = favourite,
+            favouriteCount = (post(postId).favouriteCount + if (favourite) 1 else -1).coerceAtLeast(0),
+        ),
+    )
+
+    override suspend fun setBoosted(
+        account: Account,
+        postId: String,
+        boosted: Boolean,
+    ): AppResult<MastodonPost> = AppResult.Success(
+        post(postId).copy(
+            isReblogged = boosted,
+            reblogCount = (post(postId).reblogCount + if (boosted) 1 else -1).coerceAtLeast(0),
+        ),
+    )
+
+    override suspend fun setBookmarked(
+        account: Account,
+        postId: String,
+        bookmarked: Boolean,
+    ): AppResult<MastodonPost> = AppResult.Success(post(postId).copy(isBookmarked = bookmarked))
+
+    override suspend fun replyToPost(
+        account: Account,
+        postId: String,
+        text: String,
+        visibility: String,
+    ): AppResult<MastodonPost> = AppResult.Success(
+        post(postId).copy(
+            id = "mock-reply-$postId",
+            detailId = "mock-reply-$postId",
+            contentText = text,
+            inReplyToAccountId = postId,
+            visibility = visibility,
+        ),
+    )
+
+    private fun post(postId: String): MastodonPost =
+        MockMastodonData.homeTimeline.firstOrNull { it.id == postId || it.detailId == postId }
+            ?: MockMastodonData.homeTimeline.first()
 }

@@ -16,6 +16,10 @@ data class MastodonPost(
     val replyCount: Int,
     val reblogCount: Int,
     val favouriteCount: Int,
+    val isReblogged: Boolean = false,
+    val isFavourited: Boolean = false,
+    val isBookmarked: Boolean = false,
+    val visibility: String = "public",
     val url: String?,
 )
 

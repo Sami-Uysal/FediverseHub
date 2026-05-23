@@ -47,6 +47,10 @@ object MastodonCacheMapper {
             replyCount = status.repliesCount,
             reblogCount = status.reblogsCount,
             favouriteCount = status.favouritesCount,
+            isReblogged = status.reblogged,
+            isFavourited = status.favourited,
+            isBookmarked = status.bookmarked,
+            visibility = status.visibility,
             timelinePosition = timelinePosition,
             cachedAt = cachedAt,
         )
@@ -94,6 +98,10 @@ object MastodonCacheMapper {
             replyCount = post.replyCount,
             reblogCount = post.reblogCount,
             favouriteCount = post.favouriteCount,
+            isReblogged = post.isReblogged,
+            isFavourited = post.isFavourited,
+            isBookmarked = post.isBookmarked,
+            visibility = post.visibility,
             url = post.url ?: post.uri,
         )
     }

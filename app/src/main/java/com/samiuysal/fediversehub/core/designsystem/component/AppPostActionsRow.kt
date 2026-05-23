@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -27,6 +28,7 @@ data class AppPostAction(
     val count: String,
     val contentDescription: String,
     val isHighlighted: Boolean = false,
+    val isLoading: Boolean = false,
     val onClick: () -> Unit = {},
 )
 
@@ -52,14 +54,23 @@ fun AppPostActionsRow(
             ) {
                 IconButton(
                     onClick = action.onClick,
+                    enabled = !action.isLoading,
                     modifier = Modifier.size(32.dp),
                 ) {
-                    Icon(
-                        imageVector = action.icon,
-                        contentDescription = action.contentDescription,
-                        tint = tint,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    if (action.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = tint,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = action.icon,
+                            contentDescription = action.contentDescription,
+                            tint = tint,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
                 Text(
                     text = action.count,

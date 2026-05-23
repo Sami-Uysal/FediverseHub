@@ -19,4 +19,29 @@ interface MastodonRepository {
         account: Account,
         postId: String,
     ): AppResult<MastodonPostDetail>
+
+    suspend fun setFavourite(
+        account: Account,
+        postId: String,
+        favourite: Boolean,
+    ): AppResult<MastodonPost>
+
+    suspend fun setBoosted(
+        account: Account,
+        postId: String,
+        boosted: Boolean,
+    ): AppResult<MastodonPost>
+
+    suspend fun setBookmarked(
+        account: Account,
+        postId: String,
+        bookmarked: Boolean,
+    ): AppResult<MastodonPost>
+
+    suspend fun replyToPost(
+        account: Account,
+        postId: String,
+        text: String,
+        visibility: String = "public",
+    ): AppResult<MastodonPost>
 }

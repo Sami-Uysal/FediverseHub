@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -33,6 +34,7 @@ import com.samiuysal.fediversehub.feature.lemmy.LemmyHomeScreen
 import com.samiuysal.fediversehub.feature.lemmy.LemmyHomeScreenContent
 import com.samiuysal.fediversehub.feature.mastodon.MastodonHomeScreen
 import com.samiuysal.fediversehub.feature.mastodon.MastodonHomeScreenContent
+import com.samiuysal.fediversehub.feature.mastodon.MastodonReplyComposeSheet
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreen
 
 @Composable
@@ -40,9 +42,20 @@ fun HomeRoute(
     contentPadding: PaddingValues,
     onMastodonPostSelected: (String) -> Unit,
     onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onMastodonUnauthorized: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val mastodonActionOverrides by viewModel.mastodonActionOverrides.collectAsStateWithLifecycle()
+    val replyComposeState by viewModel.replyComposeState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                HomeEffect.NavigateToMastodonLogin -> onMastodonUnauthorized()
+            }
+        }
+    }
 
     HomeScreenContent(
         uiState = uiState,
@@ -53,10 +66,12 @@ fun HomeRoute(
             MastodonHomeScreen(
                 account = uiState.selectedAccount,
                 posts = mastodonTimeline,
+                actionOverrides = mastodonActionOverrides,
                 modifier = modifier,
                 showTopBar = false,
                 onPostClick = onMastodonPostSelected,
                 onMediaClick = onMastodonMediaSelected,
+                onPostAction = viewModel::onMastodonAction,
             )
         },
         lemmyContent = { modifier ->
@@ -77,6 +92,15 @@ fun HomeRoute(
             )
         },
     )
+
+    replyComposeState?.let { state ->
+        MastodonReplyComposeSheet(
+            state = state,
+            onTextChanged = viewModel::onReplyTextChanged,
+            onDismiss = viewModel::dismissReplyCompose,
+            onSend = viewModel::submitReply,
+        )
+    }
 }
 
 @Composable
