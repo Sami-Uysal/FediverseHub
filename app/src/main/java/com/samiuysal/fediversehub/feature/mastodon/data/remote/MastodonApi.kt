@@ -56,6 +56,16 @@ interface MastodonApi {
         limit: Int = 30,
     ): List<MastodonNotificationDto>
 
+    suspend fun getAccountStatuses(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+        maxId: String? = null,
+        limit: Int = 30,
+        excludeReplies: Boolean = false,
+        onlyMedia: Boolean = false,
+    ): List<MastodonStatusDto>
+
     suspend fun favouriteStatus(
         instanceUrl: String,
         accessToken: String,

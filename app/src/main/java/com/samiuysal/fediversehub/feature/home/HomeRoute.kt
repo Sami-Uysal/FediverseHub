@@ -1,11 +1,11 @@
 package com.samiuysal.fediversehub.feature.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +41,8 @@ import com.samiuysal.fediversehub.feature.pixelfed.PixelfedHomeScreen
 @Composable
 fun HomeRoute(
     contentPadding: PaddingValues,
+    selectedPlatform: PlatformType,
+    onPlatformSelected: (PlatformType) -> Unit,
     onMastodonPostSelected: (String) -> Unit,
     onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     onMastodonUnauthorized: () -> Unit,
@@ -50,6 +52,10 @@ fun HomeRoute(
     val mastodonActionOverrides by viewModel.mastodonActionOverrides.collectAsStateWithLifecycle()
     val replyComposeState by viewModel.replyComposeState.collectAsStateWithLifecycle()
     val newPostComposeState by viewModel.newPostComposeState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(selectedPlatform) {
+        viewModel.selectPlatform(selectedPlatform)
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -62,7 +68,7 @@ fun HomeRoute(
     HomeScreenContent(
         uiState = uiState,
         contentPadding = contentPadding,
-        onPlatformSelected = { viewModel.onEvent(HomeUiEvent.PlatformSelected(it)) },
+        onPlatformSelected = onPlatformSelected,
         onComposerClick = viewModel::openNewPostCompose,
         mastodonContent = { modifier ->
             val mastodonTimeline = viewModel.mastodonTimeline.collectAsLazyPagingItems()
@@ -137,7 +143,6 @@ fun HomeScreenContent(
         HomeTopBar(
             selectedPlatform = uiState.selectedPlatform,
             onPlatformSelected = onPlatformSelected,
-            account = uiState.selectedAccount,
         )
         HomeComposerPreview(
             account = uiState.selectedAccount,
@@ -156,7 +161,6 @@ fun HomeScreenContent(
 fun HomeTopBar(
     selectedPlatform: PlatformType,
     onPlatformSelected: (PlatformType) -> Unit,
-    account: Account?,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -164,24 +168,16 @@ fun HomeTopBar(
         color = MaterialTheme.colorScheme.background.copy(alpha = 0.98f),
     ) {
         Column {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
                     .padding(horizontal = AppSpacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
             ) {
                 PlatformSwitcher(
                     selectedPlatform = selectedPlatform,
                     onPlatformSelected = onPlatformSelected,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                AppAvatar(
-                    imageUrl = account?.avatarUrl,
-                    name = account?.displayName ?: account?.username ?: "F",
-                    size = 34.dp,
+                    modifier = Modifier.align(Alignment.CenterStart),
                 )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.68f))
@@ -282,7 +278,6 @@ fun HomeTopComposerPreview() {
             HomeTopBar(
                 selectedPlatform = PlatformType.MASTODON,
                 onPlatformSelected = {},
-                account = state.accounts.first { it.platform == PlatformType.MASTODON },
             )
             HomeComposerPreview(
                 account = state.accounts.first { it.platform == PlatformType.MASTODON },

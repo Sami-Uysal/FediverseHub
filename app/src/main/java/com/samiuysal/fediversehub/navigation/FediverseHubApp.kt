@@ -7,6 +7,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,18 +17,24 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.samiuysal.fediversehub.core.designsystem.component.AppBottomBar
 import com.samiuysal.fediversehub.core.designsystem.component.AppScaffold
+import com.samiuysal.fediversehub.core.designsystem.theme.PlatformColors
+import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
-import com.samiuysal.fediversehub.feature.mastodon.notifications.MastodonNotificationsRoute
+import com.samiuysal.fediversehub.feature.notifications.PlatformNotificationsRoute
+import com.samiuysal.fediversehub.feature.profile.PlatformProfileRoute
+import com.samiuysal.fediversehub.feature.settings.SettingsRoute
 
 @Composable
 fun FediverseHubApp(
     oauthCallbackUri: Uri? = null,
     onOAuthCallbackConsumed: () -> Unit = {},
+    appStateViewModel: AppStateViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
+    val appState by appStateViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: AppDestination.HOME
 
@@ -46,6 +54,11 @@ fun FediverseHubApp(
                 AppBottomBar(
                     items = AppDestination.bottomNavItems,
                     selectedRoute = selectedRoute,
+                    accentColor = appState.selectedPlatform.accentColor,
+                    profileAvatarUrl = appState.selectedAccount?.avatarUrl,
+                    profileName = appState.selectedAccount?.displayName
+                        ?: appState.selectedAccount?.username
+                        ?: "Profile",
                     onItemSelected = { route ->
                         navController.navigate(route) {
                             launchSingleTop = true
@@ -66,6 +79,8 @@ fun FediverseHubApp(
             composable(AppDestination.HOME) {
                 HomeRoute(
                     contentPadding = contentPadding,
+                    selectedPlatform = appState.selectedPlatform,
+                    onPlatformSelected = appStateViewModel::selectPlatform,
                     onMastodonPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
@@ -94,7 +109,8 @@ fun FediverseHubApp(
                 )
             }
             composable(AppDestination.NOTIFICATIONS) {
-                MastodonNotificationsRoute(
+                PlatformNotificationsRoute(
+                    selectedPlatform = appState.selectedPlatform,
                     contentPadding = contentPadding,
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
@@ -107,14 +123,27 @@ fun FediverseHubApp(
                 )
             }
             composable(AppDestination.PROFILE) {
-                androidx.compose.foundation.layout.Box(
-                    modifier = Modifier.padding(contentPadding),
-                ) {
-                    MastodonAuthRoute(
-                        oauthCallbackUri = oauthCallbackUri,
-                        onOAuthCallbackConsumed = onOAuthCallbackConsumed,
-                    )
-                }
+                PlatformProfileRoute(
+                    selectedPlatform = appState.selectedPlatform,
+                    selectedAccount = appState.selectedAccount,
+                    contentPadding = contentPadding,
+                    oauthCallbackUri = oauthCallbackUri,
+                    onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onPlatformSelected = appStateViewModel::selectPlatform,
+                    onSettingsClick = {
+                        navController.navigate(AppDestination.SETTINGS)
+                    },
+                )
+            }
+            composable(AppDestination.SETTINGS) {
+                SettingsRoute(
+                    selectedPlatform = appState.selectedPlatform,
+                    contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                )
             }
             composable(AppDestination.AUTH_MASTODON) {
                 androidx.compose.foundation.layout.Box(
@@ -185,6 +214,13 @@ fun FediverseHubApp(
         }
     }
 }
+
+private val PlatformType.accentColor
+    get() = when (this) {
+        PlatformType.MASTODON -> PlatformColors.mastodon
+        PlatformType.LEMMY -> PlatformColors.lemmy
+        PlatformType.PIXELFED -> PlatformColors.pixelfed
+    }
 
 @Composable
 private fun PlaceholderRoute(

@@ -50,6 +50,8 @@ fun AppBottomBar(
     selectedRoute: String,
     onItemSelected: (String) -> Unit,
     accentColor: Color = MaterialTheme.colorScheme.primary,
+    profileAvatarUrl: String? = null,
+    profileName: String = "Profile",
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
@@ -74,6 +76,8 @@ fun AppBottomBar(
                         item = item,
                         selected = selectedRoute == item.route,
                         accentColor = accentColor,
+                        profileAvatarUrl = profileAvatarUrl.takeIf { item.label == "Profile" },
+                        profileName = profileName,
                         onClick = { onItemSelected(item.route) },
                         modifier = Modifier.weight(1f),
                     )
@@ -88,6 +92,8 @@ private fun BottomBarItem(
     item: AppBottomNavItem,
     selected: Boolean,
     accentColor: Color,
+    profileAvatarUrl: String?,
+    profileName: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -123,11 +129,19 @@ private fun BottomBarItem(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = item.label,
-            tint = contentColor,
-        )
+        if (profileAvatarUrl != null) {
+            AppAvatar(
+                imageUrl = profileAvatarUrl,
+                name = profileName,
+                size = if (selected) 30.dp else 28.dp,
+            )
+        } else {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.label,
+                tint = contentColor,
+            )
+        }
     }
 }
 

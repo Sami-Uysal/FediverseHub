@@ -6,6 +6,8 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.di.MockMastodonRepositoryBinding
 import com.samiuysal.fediversehub.di.RealMastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import javax.inject.Inject
@@ -25,6 +27,17 @@ class SwitchingMastodonRepository @Inject constructor(
     override fun getNotificationsPagingData(
         account: Account,
     ) = account.repository().getNotificationsPagingData(account)
+
+    override fun getAccountStatusesPagingData(
+        account: Account,
+        accountId: String,
+        filter: MastodonProfileTimelineFilter,
+    ) = account.repository().getAccountStatusesPagingData(account, accountId, filter)
+
+    override suspend fun getOwnProfile(
+        account: Account,
+    ): AppResult<MastodonProfile> =
+        account.repository().getOwnProfile(account)
 
     override suspend fun getHomeTimeline(
         account: Account,

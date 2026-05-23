@@ -14,6 +14,16 @@ interface MastodonRepository {
         account: Account,
     ): Flow<PagingData<MastodonNotification>>
 
+    fun getAccountStatusesPagingData(
+        account: Account,
+        accountId: String,
+        filter: MastodonProfileTimelineFilter,
+    ): Flow<PagingData<MastodonPost>>
+
+    suspend fun getOwnProfile(
+        account: Account,
+    ): AppResult<MastodonProfile>
+
     suspend fun getHomeTimeline(
         account: Account,
         page: MastodonTimelinePage = MastodonTimelinePage(),

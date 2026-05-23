@@ -129,6 +129,25 @@ class MastodonKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun getAccountStatuses(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+        maxId: String?,
+        limit: Int,
+        excludeReplies: Boolean,
+        onlyMedia: Boolean,
+    ): List<MastodonStatusDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/accounts/$accountId/statuses") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
+            parameter("exclude_replies", excludeReplies)
+            parameter("only_media", onlyMedia)
+            maxId?.let { parameter("max_id", it) }
+        }.body()
+    }
+
     override suspend fun favouriteStatus(
         instanceUrl: String,
         accessToken: String,

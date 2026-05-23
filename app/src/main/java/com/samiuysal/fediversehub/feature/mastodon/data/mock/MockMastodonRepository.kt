@@ -7,6 +7,9 @@ import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileField
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
 import javax.inject.Inject
@@ -36,6 +39,39 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
             MockMastodonNotificationsPagingSource(MockMastodonData.notifications)
         },
     ).flow
+
+    override fun getAccountStatusesPagingData(
+        account: Account,
+        accountId: String,
+        filter: MastodonProfileTimelineFilter,
+    ): Flow<PagingData<MastodonPost>> = Pager(
+        config = PagingConfig(
+            pageSize = MastodonTimelinePage.DEFAULT_LIMIT,
+            initialLoadSize = MastodonTimelinePage.DEFAULT_LIMIT,
+            enablePlaceholders = false,
+        ),
+        pagingSourceFactory = { MockMastodonPagingSource() },
+    ).flow
+
+    override suspend fun getOwnProfile(
+        account: Account,
+    ): AppResult<MastodonProfile> = AppResult.Success(
+        MastodonProfile(
+            id = account.id.substringAfterLast("-"),
+            displayName = account.displayName ?: account.username,
+            username = "@${account.username}",
+            avatarUrl = account.avatarUrl,
+            headerUrl = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=420&fit=crop",
+            note = "Building a calm, fast Fediverse client for Android.",
+            followersCount = 1240,
+            followingCount = 312,
+            statusesCount = 284,
+            fields = listOf(
+                MastodonProfileField("Website", "fediversehub.local"),
+                MastodonProfileField("Stack", "Kotlin, Compose, Ktor"),
+            ),
+        ),
+    )
 
     override suspend fun getHomeTimeline(
         account: Account,

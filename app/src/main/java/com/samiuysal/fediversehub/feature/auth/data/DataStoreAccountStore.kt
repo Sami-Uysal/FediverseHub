@@ -39,7 +39,7 @@ class DataStoreAccountStore @Inject constructor(
             val accounts = preferences[ACCOUNTS_JSON]
                 ?.decodeStoredAccounts()
                 .orEmpty()
-                .filterNot { it.id == account.id }
+                .filterNot { it.matches(account) }
                 .plus(account.toStoredAccount())
             preferences[ACCOUNTS_JSON] = json.encodeToString(accounts)
         }
@@ -76,6 +76,17 @@ class DataStoreAccountStore @Inject constructor(
 
     private fun String.decodeStoredAccounts(): List<StoredAccount> =
         runCatching { json.decodeFromString<List<StoredAccount>>(this) }.getOrDefault(emptyList())
+
+    private fun StoredAccount.matches(account: Account): Boolean =
+        platform == account.platform &&
+            instanceUrl.normalizedInstance() == account.instanceUrl.normalizedInstance() &&
+            (id == account.id || username.equals(account.username, ignoreCase = true))
+
+    private fun String.normalizedInstance(): String =
+        removePrefix("https://")
+            .removePrefix("http://")
+            .trimEnd('/')
+            .lowercase()
 
     private companion object {
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")

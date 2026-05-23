@@ -15,6 +15,7 @@ object AppDestination {
     const val CREATE = "create"
     const val NOTIFICATIONS = "notifications"
     const val PROFILE = "profile"
+    const val SETTINGS = "settings"
     const val AUTH_MASTODON = "auth/mastodon"
     const val POST_ID_ARGUMENT = "postId"
     const val MEDIA_URLS_ARGUMENT = "urls"

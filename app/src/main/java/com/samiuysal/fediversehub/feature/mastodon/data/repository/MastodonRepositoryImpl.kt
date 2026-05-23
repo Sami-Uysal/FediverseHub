@@ -12,14 +12,18 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonCacheMapper
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonTimelineDao
+import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonAccountStatusesPagingSource
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonApi
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonNotificationsPagingSource
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonTimelineRemoteMediator
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotification
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
+import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonProfileMapper
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -71,6 +75,47 @@ class MastodonRepositoryImpl @Inject constructor(
                 )
             },
         ).flow
+    }
+
+    override fun getAccountStatusesPagingData(
+        account: Account,
+        accountId: String,
+        filter: MastodonProfileTimelineFilter,
+    ): Flow<PagingData<MastodonPost>> {
+        val accessToken = account.accessToken.orEmpty()
+        return Pager(
+            config = PagingConfig(
+                pageSize = 30,
+                initialLoadSize = 30,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = {
+                MastodonAccountStatusesPagingSource(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = accessToken,
+                    accountId = accountId,
+                    filter = filter,
+                    mastodonApi = mastodonApi,
+                )
+            },
+        ).flow
+    }
+
+    override suspend fun getOwnProfile(
+        account: Account,
+    ): AppResult<MastodonProfile> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val profile = mastodonApi.verifyCredentials(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+            )
+            AppResult.Success(MastodonProfileMapper.dtoToDomain(profile))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
     }
 
     override suspend fun getHomeTimeline(

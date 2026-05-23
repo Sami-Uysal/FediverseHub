@@ -274,7 +274,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun selectPlatform(platform: PlatformType) {
+    fun selectPlatform(platform: PlatformType) {
         _uiState.update { it.copy(selectedPlatform = platform) }
     }
 
