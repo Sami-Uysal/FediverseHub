@@ -96,6 +96,28 @@ class LemmyRepositoryImpl @Inject constructor(
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }
 
+    override suspend fun createComment(
+        account: Account,
+        postId: String,
+        parentId: String?,
+        content: String,
+    ): AppResult<LemmyComment> {
+        val token = account.accessToken ?: return AppResult.Failure(AppError.Unauthorized)
+        return try {
+            AppResult.Success(
+                lemmyApi.createComment(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = token,
+                    postId = postId.toInt(),
+                    parentId = parentId?.toIntOrNull(),
+                    content = content,
+                ).commentView.let(LemmyApiMapper::commentViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
     override suspend fun votePost(
         account: Account,
         postId: String,
@@ -129,6 +151,30 @@ class LemmyRepositoryImpl @Inject constructor(
                     accessToken = token,
                     postId = postId.toInt(),
                     saved = saved,
+                ).postView.let(LemmyApiMapper::postViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun createPost(
+        account: Account,
+        communityId: String,
+        title: String,
+        body: String?,
+        url: String?,
+    ): AppResult<LemmyPost> {
+        val token = account.accessToken ?: return AppResult.Failure(AppError.Unauthorized)
+        return try {
+            AppResult.Success(
+                lemmyApi.createPost(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = token,
+                    communityId = communityId.toInt(),
+                    title = title,
+                    body = body,
+                    url = url,
                 ).postView.let(LemmyApiMapper::postViewToDomain),
             )
         } catch (throwable: Throwable) {

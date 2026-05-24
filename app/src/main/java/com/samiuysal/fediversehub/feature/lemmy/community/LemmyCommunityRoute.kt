@@ -19,6 +19,7 @@ fun LemmyCommunityRoute(
     viewModel: LemmyCommunityViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val composerState by viewModel.composerState.collectAsStateWithLifecycle()
     val sort by viewModel.sort.collectAsStateWithLifecycle()
     val posts = viewModel.posts.collectAsLazyPagingItems()
 
@@ -26,18 +27,30 @@ fun LemmyCommunityRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 LemmyCommunityEffect.NavigateToLogin -> onUnauthorized()
+                is LemmyCommunityEffect.PostCreated -> {
+                    posts.refresh()
+                    onPostSelected(effect.postId)
+                }
             }
         }
     }
 
     LemmyCommunityScreen(
         uiState = uiState,
+        composerState = composerState,
         posts = posts,
         selectedSort = sort,
         onBack = onBack,
         onRetry = viewModel::retry,
         onSortSelected = viewModel::selectSort,
         onFollowClick = viewModel::toggleFollow,
+        onOpenComposer = viewModel::openComposer,
+        onCloseComposer = viewModel::closeComposer,
+        onComposerTypeSelected = viewModel::selectComposerType,
+        onComposerTitleChanged = viewModel::onComposerTitleChanged,
+        onComposerBodyChanged = viewModel::onComposerBodyChanged,
+        onComposerUrlChanged = viewModel::onComposerUrlChanged,
+        onSubmitPost = viewModel::submitPost,
         onPostSelected = onPostSelected,
         modifier = Modifier.padding(contentPadding),
     )

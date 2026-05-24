@@ -8,6 +8,10 @@ import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommentActionRespo
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunitiesResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunityFollowRequestDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunityResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreateCommentRequestDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreateCommentResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreatePostRequestDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreatePostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionRequestDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostResponseDto
@@ -84,6 +88,28 @@ class LemmyKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun createComment(
+        instanceUrl: String,
+        accessToken: String,
+        postId: Int,
+        parentId: Int?,
+        content: String,
+    ): LemmyCreateCommentResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v3/comment") {
+            bearerAuth(accessToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            setBody(
+                LemmyCreateCommentRequestDto(
+                    postId = postId,
+                    parentId = parentId,
+                    content = content,
+                    auth = accessToken,
+                ),
+            )
+        }.body()
+    }
+
     override suspend fun savePost(
         instanceUrl: String,
         accessToken: String,
@@ -95,6 +121,30 @@ class LemmyKtorApi @Inject constructor(
             bearerAuth(accessToken)
             header(HttpHeaders.ContentType, ContentType.Application.Json)
             setBody(LemmyPostActionRequestDto(postId = postId, save = saved, auth = accessToken))
+        }.body()
+    }
+
+    override suspend fun createPost(
+        instanceUrl: String,
+        accessToken: String,
+        communityId: Int,
+        title: String,
+        body: String?,
+        url: String?,
+    ): LemmyCreatePostResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v3/post") {
+            bearerAuth(accessToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            setBody(
+                LemmyCreatePostRequestDto(
+                    communityId = communityId,
+                    name = title,
+                    body = body?.takeIf(String::isNotBlank),
+                    url = url?.takeIf(String::isNotBlank),
+                    auth = accessToken,
+                ),
+            )
         }.body()
     }
 

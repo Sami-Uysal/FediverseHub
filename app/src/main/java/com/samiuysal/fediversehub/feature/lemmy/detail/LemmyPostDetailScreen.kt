@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,13 +28,16 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ModeComment
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -70,6 +74,10 @@ fun LemmyPostDetailScreen(
     onToggleComment: (String) -> Unit,
     onPostAction: (LemmyPostActionType) -> Unit,
     onCommentAction: (CommentUiModel, LemmyCommentActionType) -> Unit,
+    onCommentTextChanged: (String) -> Unit,
+    onSubmitComment: () -> Unit,
+    onReplyComment: (CommentUiModel) -> Unit,
+    onCancelReply: () -> Unit,
     onCommunityClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,6 +99,10 @@ fun LemmyPostDetailScreen(
                 onToggleComment = onToggleComment,
                 onPostAction = onPostAction,
                 onCommentAction = onCommentAction,
+                onCommentTextChanged = onCommentTextChanged,
+                onSubmitComment = onSubmitComment,
+                onReplyComment = onReplyComment,
+                onCancelReply = onCancelReply,
                 onCommunityClick = onCommunityClick,
                 modifier = Modifier.weight(1f),
             )
@@ -143,6 +155,10 @@ private fun LemmyPostDetailContent(
     onToggleComment: (String) -> Unit,
     onPostAction: (LemmyPostActionType) -> Unit,
     onCommentAction: (CommentUiModel, LemmyCommentActionType) -> Unit,
+    onCommentTextChanged: (String) -> Unit,
+    onSubmitComment: () -> Unit,
+    onReplyComment: (CommentUiModel) -> Unit,
+    onCancelReply: () -> Unit,
     onCommunityClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -159,6 +175,15 @@ private fun LemmyPostDetailContent(
                 post = state.post,
                 onPostAction = onPostAction,
                 onCommunityClick = onCommunityClick,
+            )
+        }
+
+        item(key = "lemmy-comment-composer", contentType = "lemmy-comment-composer") {
+            LemmyCommentComposer(
+                state = state.composer,
+                onTextChanged = onCommentTextChanged,
+                onSubmit = onSubmitComment,
+                onCancelReply = onCancelReply,
             )
         }
 
@@ -201,10 +226,75 @@ private fun LemmyPostDetailContent(
                     item = item,
                     onToggleComment = onToggleComment,
                     onCommentAction = onCommentAction,
+                    onReplyComment = onReplyComment,
                 )
             }
         }
     }
+}
+
+@Composable
+private fun LemmyCommentComposer(
+    state: LemmyCommentComposerUiState,
+    onTextChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onCancelReply: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(AppSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = state.parentAuthor?.let { "$it yanıtlanıyor" } ?: "Yorum yaz",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            if (state.parentId != null) {
+                TextButton(onClick = onCancelReply, enabled = !state.isSubmitting) {
+                    Text("Vazgeç")
+                }
+            }
+        }
+        OutlinedTextField(
+            value = state.text,
+            onValueChange = onTextChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 96.dp),
+            enabled = !state.isSubmitting,
+            minLines = 3,
+            placeholder = { Text("Düşünceni yaz...") },
+            supportingText = {
+                state.errorMessage?.let {
+                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                }
+            },
+        )
+        Button(
+            onClick = onSubmit,
+            enabled = !state.isSubmitting && state.text.isNotBlank(),
+            modifier = Modifier.align(Alignment.End),
+        ) {
+            if (state.isSubmitting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+                Spacer(modifier = Modifier.width(AppSpacing.xs))
+            }
+            Text(if (state.parentId == null) "Yorum gönder" else "Yanıt gönder")
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
 }
 
 @Composable
@@ -417,6 +507,7 @@ private fun LemmyCommentRow(
     item: LemmyVisibleComment,
     onToggleComment: (String) -> Unit,
     onCommentAction: (CommentUiModel, LemmyCommentActionType) -> Unit,
+    onReplyComment: (CommentUiModel) -> Unit,
 ) {
     val comment = item.comment
     Surface(
@@ -502,6 +593,12 @@ private fun LemmyCommentRow(
                             Color.Unspecified
                         },
                     )
+                    TextButton(
+                        onClick = { onReplyComment(comment) },
+                        enabled = !comment.isCollapsed,
+                    ) {
+                        Text("Yanıtla")
+                    }
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f))
@@ -589,6 +686,10 @@ fun LemmyPostDetailScreenPreview() {
             onToggleComment = {},
             onPostAction = {},
             onCommentAction = { _, _ -> },
+            onCommentTextChanged = {},
+            onSubmitComment = {},
+            onReplyComment = {},
+            onCancelReply = {},
             onCommunityClick = {},
         )
     }

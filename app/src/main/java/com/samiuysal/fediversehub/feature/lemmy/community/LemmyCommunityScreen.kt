@@ -11,23 +11,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -57,12 +64,20 @@ import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 @Composable
 fun LemmyCommunityScreen(
     uiState: LemmyCommunityUiState,
+    composerState: LemmyPostComposerUiState,
     posts: LazyPagingItems<LemmyPostUiModel>,
     selectedSort: LemmySortType,
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onSortSelected: (LemmySortType) -> Unit,
     onFollowClick: () -> Unit,
+    onOpenComposer: () -> Unit,
+    onCloseComposer: () -> Unit,
+    onComposerTypeSelected: (LemmyPostComposeType) -> Unit,
+    onComposerTitleChanged: (String) -> Unit,
+    onComposerBodyChanged: (String) -> Unit,
+    onComposerUrlChanged: (String) -> Unit,
+    onSubmitPost: () -> Unit,
     onPostSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -80,10 +95,18 @@ fun LemmyCommunityScreen(
             )
             is LemmyCommunityUiState.Success -> LemmyCommunityContent(
                 community = uiState.community,
+                composerState = composerState,
                 posts = posts,
                 selectedSort = selectedSort,
                 onSortSelected = onSortSelected,
                 onFollowClick = onFollowClick,
+                onOpenComposer = onOpenComposer,
+                onCloseComposer = onCloseComposer,
+                onComposerTypeSelected = onComposerTypeSelected,
+                onComposerTitleChanged = onComposerTitleChanged,
+                onComposerBodyChanged = onComposerBodyChanged,
+                onComposerUrlChanged = onComposerUrlChanged,
+                onSubmitPost = onSubmitPost,
                 onPostSelected = onPostSelected,
                 modifier = Modifier.weight(1f),
             )
@@ -120,10 +143,18 @@ private fun LemmyCommunityTopBar(onBack: () -> Unit) {
 @Composable
 private fun LemmyCommunityContent(
     community: LemmyCommunityUiModel,
+    composerState: LemmyPostComposerUiState,
     posts: LazyPagingItems<LemmyPostUiModel>,
     selectedSort: LemmySortType,
     onSortSelected: (LemmySortType) -> Unit,
     onFollowClick: () -> Unit,
+    onOpenComposer: () -> Unit,
+    onCloseComposer: () -> Unit,
+    onComposerTypeSelected: (LemmyPostComposeType) -> Unit,
+    onComposerTitleChanged: (String) -> Unit,
+    onComposerBodyChanged: (String) -> Unit,
+    onComposerUrlChanged: (String) -> Unit,
+    onSubmitPost: () -> Unit,
     onPostSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -135,7 +166,19 @@ private fun LemmyCommunityContent(
             LemmyCommunityHeader(
                 community = community,
                 onFollowClick = onFollowClick,
+                onOpenComposer = onOpenComposer,
             )
+            if (composerState.isOpen) {
+                LemmyPostComposer(
+                    state = composerState,
+                    onClose = onCloseComposer,
+                    onTypeSelected = onComposerTypeSelected,
+                    onTitleChanged = onComposerTitleChanged,
+                    onBodyChanged = onComposerBodyChanged,
+                    onUrlChanged = onComposerUrlChanged,
+                    onSubmit = onSubmitPost,
+                )
+            }
             LemmyCommunitySort(
                 selectedSort = selectedSort,
                 onSortSelected = onSortSelected,
@@ -185,6 +228,7 @@ private fun LemmyCommunityContent(
 private fun LemmyCommunityHeader(
     community: LemmyCommunityUiModel,
     onFollowClick: () -> Unit,
+    onOpenComposer: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         val bannerUrl = community.bannerUrl
@@ -264,8 +308,135 @@ private fun LemmyCommunityHeader(
                 },
             )
         }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AppSpacing.lg),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            AssistChip(
+                onClick = onOpenComposer,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                    )
+                },
+                label = { Text("Post oluştur") },
+            )
+        }
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f))
     }
+}
+
+@Composable
+private fun LemmyPostComposer(
+    state: LemmyPostComposerUiState,
+    onClose: () -> Unit,
+    onTypeSelected: (LemmyPostComposeType) -> Unit,
+    onTitleChanged: (String) -> Unit,
+    onBodyChanged: (String) -> Unit,
+    onUrlChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(AppSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Yeni post",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onClose, enabled = !state.isSubmitting) {
+                Icon(Icons.Outlined.Close, contentDescription = "Kapat")
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+            FilterChip(
+                selected = state.type == LemmyPostComposeType.TEXT,
+                onClick = { onTypeSelected(LemmyPostComposeType.TEXT) },
+                enabled = !state.isSubmitting,
+                label = { Text("Text") },
+            )
+            FilterChip(
+                selected = state.type == LemmyPostComposeType.LINK,
+                onClick = { onTypeSelected(LemmyPostComposeType.LINK) },
+                enabled = !state.isSubmitting,
+                label = { Text("Link") },
+            )
+        }
+        OutlinedTextField(
+            value = state.title,
+            onValueChange = onTitleChanged,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isSubmitting,
+            singleLine = true,
+            label = { Text("Title") },
+        )
+        if (state.type == LemmyPostComposeType.LINK) {
+            OutlinedTextField(
+                value = state.url,
+                onValueChange = onUrlChanged,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isSubmitting,
+                singleLine = true,
+                label = { Text("URL") },
+                placeholder = { Text("https://...") },
+            )
+        }
+        OutlinedTextField(
+            value = state.body,
+            onValueChange = onBodyChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 96.dp),
+            enabled = !state.isSubmitting,
+            minLines = 3,
+            label = { Text("Body") },
+        )
+        state.errorMessage?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onClose, enabled = !state.isSubmitting) {
+                Text("Vazgeç")
+            }
+            Spacer(modifier = Modifier.width(AppSpacing.sm))
+            Button(
+                onClick = onSubmit,
+                enabled = !state.isSubmitting && state.title.isNotBlank(),
+            ) {
+                if (state.isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(modifier = Modifier.width(AppSpacing.xs))
+                }
+                Text("Yayınla")
+            }
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f))
 }
 
 @Composable

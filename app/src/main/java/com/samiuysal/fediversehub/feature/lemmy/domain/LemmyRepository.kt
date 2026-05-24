@@ -22,9 +22,24 @@ interface LemmyRepository {
 
     suspend fun getComments(account: Account, postId: String): AppResult<List<LemmyComment>>
 
+    suspend fun createComment(
+        account: Account,
+        postId: String,
+        parentId: String?,
+        content: String,
+    ): AppResult<LemmyComment>
+
     suspend fun votePost(account: Account, postId: String, score: Int): AppResult<LemmyPost>
 
     suspend fun savePost(account: Account, postId: String, saved: Boolean): AppResult<LemmyPost>
+
+    suspend fun createPost(
+        account: Account,
+        communityId: String,
+        title: String,
+        body: String?,
+        url: String?,
+    ): AppResult<LemmyPost>
 
     suspend fun voteComment(account: Account, commentId: String, score: Int): AppResult<LemmyComment>
 

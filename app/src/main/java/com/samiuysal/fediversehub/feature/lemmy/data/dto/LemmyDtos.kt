@@ -31,6 +31,19 @@ data class LemmyCommentsResponseDto(
 )
 
 @Serializable
+data class LemmyCreateCommentRequestDto(
+    @SerialName("post_id") val postId: Int,
+    @SerialName("parent_id") val parentId: Int? = null,
+    val content: String,
+    val auth: String? = null,
+)
+
+@Serializable
+data class LemmyCreateCommentResponseDto(
+    @SerialName("comment_view") val commentView: LemmyCommentViewDto,
+)
+
+@Serializable
 data class LemmyCommunitiesResponseDto(
     val communities: List<LemmyCommunityViewDto> = emptyList(),
 )
@@ -50,6 +63,20 @@ data class LemmyPostActionRequestDto(
 
 @Serializable
 data class LemmyPostActionResponseDto(
+    @SerialName("post_view") val postView: LemmyPostViewDto,
+)
+
+@Serializable
+data class LemmyCreatePostRequestDto(
+    @SerialName("community_id") val communityId: Int,
+    val name: String,
+    val url: String? = null,
+    val body: String? = null,
+    val auth: String? = null,
+)
+
+@Serializable
+data class LemmyCreatePostResponseDto(
     @SerialName("post_view") val postView: LemmyPostViewDto,
 )
 

@@ -7,6 +7,8 @@ import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommentActionRespo
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunitiesResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunityResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreateCommentResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreatePostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostsResponseDto
 
@@ -36,6 +38,14 @@ interface LemmyApi {
         limit: Int,
     ): LemmyCommentsResponseDto
 
+    suspend fun createComment(
+        instanceUrl: String,
+        accessToken: String,
+        postId: Int,
+        parentId: Int?,
+        content: String,
+    ): LemmyCreateCommentResponseDto
+
     suspend fun votePost(
         instanceUrl: String,
         accessToken: String,
@@ -49,6 +59,15 @@ interface LemmyApi {
         postId: Int,
         saved: Boolean,
     ): LemmyPostActionResponseDto
+
+    suspend fun createPost(
+        instanceUrl: String,
+        accessToken: String,
+        communityId: Int,
+        title: String,
+        body: String?,
+        url: String?,
+    ): LemmyCreatePostResponseDto
 
     suspend fun voteComment(
         instanceUrl: String,

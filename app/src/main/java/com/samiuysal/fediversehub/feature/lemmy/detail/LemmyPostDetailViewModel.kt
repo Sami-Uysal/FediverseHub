@@ -151,6 +151,81 @@ class LemmyPostDetailViewModel @Inject constructor(
         }
     }
 
+    fun onCommentTextChanged(value: String) {
+        _uiState.update { state ->
+            val success = state as? LemmyPostDetailUiState.Success ?: return@update state
+            success.copy(composer = success.composer.copy(text = value, errorMessage = null))
+        }
+    }
+
+    fun startReply(comment: CommentUiModel) {
+        _uiState.update { state ->
+            val success = state as? LemmyPostDetailUiState.Success ?: return@update state
+            success.copy(
+                composer = success.composer.copy(
+                    parentId = comment.id,
+                    parentAuthor = comment.author,
+                    errorMessage = null,
+                ),
+            )
+        }
+    }
+
+    fun cancelReply() {
+        _uiState.update { state ->
+            val success = state as? LemmyPostDetailUiState.Success ?: return@update state
+            success.copy(composer = success.composer.copy(parentId = null, parentAuthor = null, errorMessage = null))
+        }
+    }
+
+    fun submitComment() {
+        val current = _uiState.value as? LemmyPostDetailUiState.Success ?: return
+        val content = current.composer.text.trim()
+        if (content.isBlank()) {
+            _uiState.value = current.copy(
+                composer = current.composer.copy(errorMessage = "Yorum boş olamaz."),
+            )
+            return
+        }
+        _uiState.value = current.copy(composer = current.composer.copy(isSubmitting = true, errorMessage = null))
+        viewModelScope.launch {
+            when (
+                val result = lemmyRepository.createComment(
+                    account = lemmyAccount(),
+                    postId = current.post.id,
+                    parentId = current.composer.parentId,
+                    content = content,
+                )
+            ) {
+                is AppResult.Success -> {
+                    val comment = LemmyPostMapper.commentToUi(result.data)
+                    _uiState.update { state ->
+                        val success = state as? LemmyPostDetailUiState.Success ?: return@update state
+                        success.copy(
+                            post = success.post.copy(comments = success.post.comments + 1),
+                            comments = success.comments.insertComment(comment, success.composer.parentId),
+                            composer = LemmyCommentComposerUiState(),
+                        )
+                    }
+                }
+                is AppResult.Failure -> {
+                    _uiState.update { state ->
+                        val success = state as? LemmyPostDetailUiState.Success ?: return@update state
+                        success.copy(
+                            composer = success.composer.copy(
+                                isSubmitting = false,
+                                errorMessage = result.error.lemmyMessage(),
+                            ),
+                        )
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(LemmyPostDetailEffect.NavigateToLogin)
+                    }
+                }
+            }
+        }
+    }
+
     private fun load() {
         viewModelScope.launch {
             _uiState.value = LemmyPostDetailUiState.Loading
@@ -243,6 +318,20 @@ private fun LemmyPostDetailUiState.Success.replaceComment(
     comment: CommentUiModel,
 ): LemmyPostDetailUiState.Success =
     copy(comments = comments.map { if (it.id == comment.id) comment else it })
+
+private fun List<CommentUiModel>.insertComment(
+    comment: CommentUiModel,
+    parentId: String?,
+): List<CommentUiModel> {
+    if (parentId == null) return this + comment
+    val parentIndex = indexOfFirst { it.id == parentId }
+    if (parentIndex == -1) return this + comment
+    val parentDepth = this[parentIndex].depth
+    val insertIndex = (parentIndex + 1 until size)
+        .firstOrNull { this[it].depth <= parentDepth }
+        ?: size
+    return toMutableList().apply { add(insertIndex, comment) }
+}
 
 private fun LemmyPostUiModel.optimistic(action: LemmyPostActionType): LemmyPostUiModel =
     when (action) {

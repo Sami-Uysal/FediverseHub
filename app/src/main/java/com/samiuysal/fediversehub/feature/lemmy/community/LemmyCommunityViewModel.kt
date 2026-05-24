@@ -48,6 +48,8 @@ class LemmyCommunityViewModel @Inject constructor(
     private val communityName: String = checkNotNull(savedStateHandle[AppDestination.COMMUNITY_NAME_ARGUMENT])
     private val _uiState = MutableStateFlow<LemmyCommunityUiState>(LemmyCommunityUiState.Loading)
     val uiState: StateFlow<LemmyCommunityUiState> = _uiState.asStateFlow()
+    private val _composerState = MutableStateFlow(LemmyPostComposerUiState())
+    val composerState: StateFlow<LemmyPostComposerUiState> = _composerState.asStateFlow()
     private val _sort = MutableStateFlow(LemmySortType.HOT)
     val sort: StateFlow<LemmySortType> = _sort.asStateFlow()
     private val _effects = MutableSharedFlow<LemmyCommunityEffect>()
@@ -85,6 +87,77 @@ class LemmyCommunityViewModel @Inject constructor(
 
     fun selectSort(sort: LemmySortType) {
         _sort.value = sort
+    }
+
+    fun openComposer() {
+        _composerState.update { it.copy(isOpen = true, errorMessage = null) }
+    }
+
+    fun closeComposer() {
+        _composerState.value = LemmyPostComposerUiState()
+    }
+
+    fun selectComposerType(type: LemmyPostComposeType) {
+        _composerState.update { it.copy(type = type, errorMessage = null) }
+    }
+
+    fun onComposerTitleChanged(value: String) {
+        _composerState.update { it.copy(title = value, errorMessage = null) }
+    }
+
+    fun onComposerBodyChanged(value: String) {
+        _composerState.update { it.copy(body = value, errorMessage = null) }
+    }
+
+    fun onComposerUrlChanged(value: String) {
+        _composerState.update { it.copy(url = value, errorMessage = null) }
+    }
+
+    fun submitPost() {
+        val community = (_uiState.value as? LemmyCommunityUiState.Success)?.community ?: return
+        val current = _composerState.value
+        val title = current.title.trim()
+        if (community.id.isBlank()) {
+            _composerState.value = current.copy(errorMessage = "Community bilgisi eksik.")
+            return
+        }
+        if (title.isBlank()) {
+            _composerState.value = current.copy(errorMessage = "Title zorunlu.")
+            return
+        }
+        _composerState.value = current.copy(isSubmitting = true, errorMessage = null)
+        viewModelScope.launch {
+            when (
+                val result = lemmyRepository.createPost(
+                    account = lemmyAccount(),
+                    communityId = community.id,
+                    title = title,
+                    body = current.body.trim().takeIf(String::isNotBlank),
+                    url = if (current.type == LemmyPostComposeType.LINK) {
+                        current.url.trim().takeIf(String::isNotBlank)
+                    } else {
+                        null
+                    },
+                )
+            ) {
+                is AppResult.Success -> {
+                    _composerState.value = LemmyPostComposerUiState()
+                    _uiState.update { state ->
+                        val success = state as? LemmyCommunityUiState.Success ?: return@update state
+                        success.copy(community = success.community.copy(posts = success.community.posts + 1))
+                    }
+                    _effects.emit(LemmyCommunityEffect.PostCreated(result.data.id))
+                }
+                is AppResult.Failure -> {
+                    _composerState.update {
+                        it.copy(isSubmitting = false, errorMessage = result.error.lemmyMessage())
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(LemmyCommunityEffect.NavigateToLogin)
+                    }
+                }
+            }
+        }
     }
 
     fun toggleFollow() {
@@ -162,6 +235,7 @@ class LemmyCommunityViewModel @Inject constructor(
 
 sealed interface LemmyCommunityEffect {
     data object NavigateToLogin : LemmyCommunityEffect
+    data class PostCreated(val postId: String) : LemmyCommunityEffect
 }
 
 private fun AppError.lemmyMessage(): String = when (this) {

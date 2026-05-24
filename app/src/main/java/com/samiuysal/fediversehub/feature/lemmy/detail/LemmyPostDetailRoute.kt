@@ -35,6 +35,10 @@ fun LemmyPostDetailRoute(
         onToggleComment = viewModel::toggleComment,
         onPostAction = viewModel::onPostAction,
         onCommentAction = viewModel::onCommentAction,
+        onCommentTextChanged = viewModel::onCommentTextChanged,
+        onSubmitComment = viewModel::submitComment,
+        onReplyComment = viewModel::startReply,
+        onCancelReply = viewModel::cancelReply,
         onCommunityClick = onCommunitySelected,
         modifier = Modifier.padding(contentPadding),
     )

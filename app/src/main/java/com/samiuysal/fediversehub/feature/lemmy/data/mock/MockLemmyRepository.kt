@@ -51,11 +51,49 @@ class MockLemmyRepository @Inject constructor() : LemmyRepository {
     ): AppResult<List<LemmyComment>> =
         AppResult.Success(MockLemmyData.posts.firstOrNull { it.id == postId }?.comments.orEmpty())
 
+    override suspend fun createComment(
+        account: Account,
+        postId: String,
+        parentId: String?,
+        content: String,
+    ): AppResult<LemmyComment> =
+        AppResult.Success(
+            LemmyComment(
+                id = "mock-comment-${content.hashCode()}",
+                parentId = parentId,
+                authorName = account.displayName ?: account.username,
+                content = content,
+                depth = if (parentId == null) 0 else 1,
+                isCollapsed = false,
+                score = 1,
+                myVote = 1,
+            ),
+        )
+
     override suspend fun votePost(account: Account, postId: String, score: Int): AppResult<LemmyPost> =
         getPost(account, postId)
 
     override suspend fun savePost(account: Account, postId: String, saved: Boolean): AppResult<LemmyPost> =
         getPost(account, postId)
+
+    override suspend fun createPost(
+        account: Account,
+        communityId: String,
+        title: String,
+        body: String?,
+        url: String?,
+    ): AppResult<LemmyPost> =
+        AppResult.Success(
+            MockLemmyData.posts.first().copy(
+                id = "mock-post-${title.hashCode()}",
+                title = title,
+                previewText = body.orEmpty(),
+                url = url,
+                authorName = account.displayName ?: account.username,
+                commentCount = 0,
+                score = 1,
+            ),
+        )
 
     override suspend fun voteComment(account: Account, commentId: String, score: Int): AppResult<LemmyComment> =
         AppResult.Success(
