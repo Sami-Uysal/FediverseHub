@@ -114,8 +114,8 @@ private fun SearchScreen(
             )
         } else {
             EmptyState(
-                title = "${selectedPlatform.label} search coming soon",
-                message = "Mastodon search is live. ${selectedPlatform.label} will use this same shell.",
+                title = "${selectedPlatform.label} arama yakında",
+                message = "Şimdilik Mastodon arama aktif. ${selectedPlatform.label} araması burada açılacak.",
                 modifier = Modifier.weight(1f),
             )
         }

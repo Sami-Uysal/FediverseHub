@@ -52,6 +52,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.samiuysal.fediversehub.core.common.error.userFacingMessage
 import com.samiuysal.fediversehub.core.designsystem.component.AppCompactLinkPreview
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppLinkPreview
@@ -419,7 +420,7 @@ private fun LemmyExploreContent(
             posts.loadState.refresh is LoadState.Error && posts.itemCount == 0 -> {
                 val error = posts.loadState.refresh as LoadState.Error
                 AppErrorState(
-                    message = error.error.localizedMessage ?: "Lemmy keşfet yüklenemedi.",
+                    message = error.error.userFacingMessage("Lemmy keşfet yüklenemedi."),
                     onRetry = posts::retry,
                     modifier = Modifier.weight(1f),
                 )
@@ -730,7 +731,7 @@ private fun PixelfedExploreContent(
             posts.loadState.refresh is LoadState.Error && posts.itemCount == 0 -> {
                 val error = posts.loadState.refresh as LoadState.Error
                 AppErrorState(
-                    message = error.error.localizedMessage ?: "Pixelfed Explore yüklenemedi.",
+                    message = error.error.userFacingMessage("Pixelfed Explore yüklenemedi."),
                     onRetry = posts::retry,
                     modifier = Modifier.weight(1f),
                 )

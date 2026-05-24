@@ -7,14 +7,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -22,7 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.samiuysal.fediversehub.BuildConfig
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
+import com.samiuysal.fediversehub.core.datastore.ThemeMode
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
@@ -39,6 +47,8 @@ fun SettingsRoute(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val storedAccounts by viewModel.accounts.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val cacheState by viewModel.cacheState.collectAsStateWithLifecycle()
     val account = selectedAccount?.takeIf { selected ->
         storedAccounts.any { it.id == selected.id }
     } ?: platformAccounts.firstOrNull()
@@ -46,9 +56,15 @@ fun SettingsRoute(
     SettingsScreen(
         selectedPlatform = selectedPlatform,
         platformAccounts = platformAccounts,
+        allAccounts = storedAccounts,
         account = account,
+        themeMode = themeMode,
+        cacheState = cacheState,
+        appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         contentPadding = contentPadding,
         onAccountSelected = onAccountSelected,
+        onThemeModeSelected = viewModel::selectThemeMode,
+        onClearCache = viewModel::clearCache,
         onBack = onBack,
         onLogout = {
             if (account != null) {
@@ -62,9 +78,15 @@ fun SettingsRoute(
 fun SettingsScreen(
     selectedPlatform: PlatformType,
     platformAccounts: List<Account>,
+    allAccounts: List<Account>,
     account: Account?,
+    themeMode: ThemeMode,
+    cacheState: CacheClearState,
+    appVersion: String,
     contentPadding: PaddingValues,
     onAccountSelected: (Account) -> Unit,
+    onThemeModeSelected: (ThemeMode) -> Unit,
+    onClearCache: () -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -94,7 +116,9 @@ fun SettingsScreen(
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
         Column(
-            modifier = Modifier.padding(AppSpacing.lg),
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(AppSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.lg),
         ) {
             SettingsRow(
@@ -119,19 +143,102 @@ fun SettingsScreen(
                 value = "${platformAccounts.size}",
             )
             SettingsRow(
-                title = "App theme",
-                value = "System default",
+                title = "All accounts",
+                value = "${allAccounts.size}",
+            )
+            ThemeModeSelector(
+                selectedMode = themeMode,
+                onThemeModeSelected = onThemeModeSelected,
+            )
+            CacheSection(
+                state = cacheState,
+                onClearCache = onClearCache,
             )
             SettingsRow(
-                title = "Cache / debug",
-                value = "Offline cache active for Mastodon timeline",
+                title = "Token storage",
+                value = "Android Keystore encrypted",
             )
-            TextButton(
+            SettingsRow(
+                title = "About",
+                value = "FediverseHub $appVersion",
+            )
+            Button(
                 enabled = account != null,
                 onClick = onLogout,
             ) {
+                Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
                 Text("Logout")
             }
+        }
+    }
+}
+
+@Composable
+private fun ThemeModeSelector(
+    selectedMode: ThemeMode,
+    onThemeModeSelected: (ThemeMode) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+        Text(
+            text = "Theme mode",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+            ThemeMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = selectedMode == mode,
+                    onClick = { onThemeModeSelected(mode) },
+                    label = { Text(mode.label) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CacheSection(
+    state: CacheClearState,
+    onClearCache: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+        Text(
+            text = "Cache",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = when (state) {
+                    CacheClearState.Idle -> "Offline cache ready"
+                    CacheClearState.Clearing -> "Clearing cache..."
+                    CacheClearState.Done -> "Cache cleared"
+                    CacheClearState.Error -> "Cache could not be cleared"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            AssistChip(
+                onClick = onClearCache,
+                enabled = state != CacheClearState.Clearing,
+                leadingIcon = {
+                    Icon(Icons.Outlined.DeleteSweep, contentDescription = null)
+                },
+                label = {
+                    Text("Clear")
+                },
+            )
+        }
+        if (state == CacheClearState.Error) {
+            Text(
+                text = "Tekrar dene. Hesapların silinmez.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.samiuysal.fediversehub.core.datastore.SecureTokenStore
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
@@ -12,9 +13,13 @@ import com.samiuysal.fediversehub.feature.auth.domain.PixelfedOAuthSession
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -23,16 +28,27 @@ private val Context.authDataStore by preferencesDataStore(name = "auth_session")
 @Singleton
 class DataStoreAccountStore @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val secureTokenStore: SecureTokenStore,
 ) : AccountStore {
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
     }
+    private val migrationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        migrationScope.launch { migrateLegacyPlainTokens() }
+    }
 
     override val accounts: Flow<List<Account>> = context.authDataStore.data.map { preferences ->
         preferences[ACCOUNTS_JSON]
             ?.decodeStoredAccounts()
-            ?.map(StoredAccount::toDomain)
+            ?.map { stored ->
+                stored.toDomain(
+                    accessTokenOverride = secureTokenStore.readAccessToken(stored.id)
+                        ?: stored.accessToken,
+                )
+            }
             .orEmpty()
     }
 
@@ -44,6 +60,9 @@ class DataStoreAccountStore @Inject constructor(
         }
 
     override suspend fun saveAccount(account: Account) {
+        account.accessToken?.let { token ->
+            secureTokenStore.writeAccessToken(account.id, token)
+        }
         context.authDataStore.edit { preferences ->
             val accounts = preferences[ACCOUNTS_JSON]
                 ?.decodeStoredAccounts()
@@ -67,6 +86,7 @@ class DataStoreAccountStore @Inject constructor(
                 .filterValues { it != accountId }
             preferences[ACTIVE_ACCOUNTS_JSON] = json.encodeToString(activeAccounts)
         }
+        secureTokenStore.deleteAccessToken(accountId)
     }
 
     override suspend fun saveActiveAccount(platform: PlatformType, accountId: String) {
@@ -133,6 +153,23 @@ class DataStoreAccountStore @Inject constructor(
             .removePrefix("http://")
             .trimEnd('/')
             .lowercase()
+
+    private suspend fun migrateLegacyPlainTokens() {
+        context.authDataStore.edit { preferences ->
+            val accounts = preferences[ACCOUNTS_JSON]
+                ?.decodeStoredAccounts()
+                .orEmpty()
+            val migrated = accounts.map { stored ->
+                stored.accessToken?.let { token ->
+                    secureTokenStore.writeAccessToken(stored.id, token)
+                }
+                stored.copy(accessToken = null)
+            }
+            if (migrated != accounts) {
+                preferences[ACCOUNTS_JSON] = json.encodeToString(migrated)
+            }
+        }
+    }
 
     private companion object {
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")

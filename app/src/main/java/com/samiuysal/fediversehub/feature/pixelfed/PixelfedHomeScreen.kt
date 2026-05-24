@@ -57,6 +57,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.samiuysal.fediversehub.core.common.error.userFacingMessage
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppIconButton
@@ -111,7 +112,7 @@ fun PixelfedHomeScreen(
                     val error = posts.loadState.refresh as LoadState.Error
                     item(key = "pixelfed-error", contentType = "pixelfed-error") {
                         AppErrorState(
-                            message = error.error.localizedMessage ?: "Pixelfed feed failed.",
+                            message = error.error.userFacingMessage("Pixelfed feed yüklenemedi."),
                             onRetry = posts::retry,
                             modifier = Modifier
                                 .fillMaxWidth()

@@ -65,6 +65,7 @@ import androidx.paging.compose.itemKey
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.samiuysal.fediversehub.core.common.error.userFacingMessage
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
@@ -122,7 +123,8 @@ fun LemmyHomeScreen(
         when {
             isInitialLoading -> LemmyFeedSkeleton(modifier = Modifier.weight(1f))
             refreshError != null && posts.itemCount == 0 -> AppErrorState(
-                message = refreshError?.error?.message ?: "Lemmy feed yüklenemedi.",
+                message = refreshError?.error?.userFacingMessage("Lemmy feed yüklenemedi.")
+                    ?: "Lemmy feed yüklenemedi.",
                 onRetry = posts::retry,
                 modifier = Modifier.weight(1f),
             )
@@ -339,7 +341,7 @@ private fun LemmyPostList(
         if (appendError != null) {
             item(key = "lemmy-append-error", contentType = "lemmy-error") {
                 AppErrorState(
-                    message = appendError.error.message ?: "Daha fazla Lemmy gönderisi yüklenemedi.",
+                    message = appendError.error.userFacingMessage("Daha fazla Lemmy gönderisi yüklenemedi."),
                     onRetry = posts::retry,
                     modifier = Modifier.height(220.dp),
                 )

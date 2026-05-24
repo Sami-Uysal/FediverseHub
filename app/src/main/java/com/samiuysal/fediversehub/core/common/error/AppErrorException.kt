@@ -5,10 +5,13 @@ class AppErrorException(
     override val message: String = appError.userMessage(),
 ) : RuntimeException(message)
 
+fun Throwable.userFacingMessage(fallback: String): String =
+    (this as? AppErrorException)?.appError?.userMessage() ?: fallback
+
 fun AppError.userMessage(): String = when (this) {
-    AppError.Network -> "Network connection failed. Check your connection and try again."
-    AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
-    AppError.Unauthorized -> "Session expired. Log in again to refresh your Mastodon timeline."
-    is AppError.Server -> "Server error ${code}. Try again shortly."
-    is AppError.Unknown -> message ?: "Something went wrong. Try again."
+    AppError.Network -> "İnternet bağlantısı yok gibi. Bağlantını kontrol et."
+    AppError.RateLimited -> "Çok hızlı istek atıldı. Biraz bekle, tekrar dene."
+    AppError.Unauthorized -> "Oturum süresi doldu. Hesaba tekrar giriş yap."
+    is AppError.Server -> "Sunucu şu an yanıt veremiyor. Biraz sonra tekrar dene."
+    is AppError.Unknown -> "Bir şey ters gitti. Tekrar dene."
 }

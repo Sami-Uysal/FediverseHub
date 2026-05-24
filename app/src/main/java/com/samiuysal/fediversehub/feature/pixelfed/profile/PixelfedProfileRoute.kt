@@ -41,6 +41,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.samiuysal.fediversehub.core.common.error.userFacingMessage
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppLoading
@@ -141,7 +142,7 @@ private fun PixelfedProfileContent(
                 val error = media.loadState.refresh as LoadState.Error
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                     AppErrorState(
-                        message = error.error.localizedMessage ?: "Profile media failed.",
+                        message = error.error.userFacingMessage("Profil medyası yüklenemedi."),
                         onRetry = media::retry,
                         modifier = Modifier.height(180.dp),
                     )
@@ -180,7 +181,7 @@ private fun PixelfedProfileContent(
             is LoadState.Error -> {
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                     AppErrorState(
-                        message = appendState.error.localizedMessage ?: "More media failed.",
+                        message = appendState.error.userFacingMessage("Daha fazla medya yüklenemedi."),
                         onRetry = media::retry,
                         modifier = Modifier.height(120.dp),
                     )

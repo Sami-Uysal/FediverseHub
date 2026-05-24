@@ -2,6 +2,8 @@ package com.samiuysal.fediversehub.feature.lemmy.data.remote
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.samiuysal.fediversehub.core.common.error.AppErrorException
+import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPostPage
@@ -43,6 +45,6 @@ class LemmyPostPagingSource(
                 nextKey = if (posts.size < limit) null else page + 1,
             )
         } catch (throwable: Throwable) {
-            LoadResult.Error(throwable)
+            LoadResult.Error(AppErrorException(NetworkErrorMapper.map(throwable)))
         }
 }

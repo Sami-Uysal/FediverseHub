@@ -25,13 +25,13 @@ fun PlatformNotificationsRoute(
             onProfileSelected = onProfileSelected,
         )
         PlatformType.LEMMY -> EmptyState(
-            title = "Lemmy notifications coming soon",
-            message = "Community replies and mentions will use the same app shell.",
+            title = "Lemmy bildirimleri yakında",
+            message = "Community yanıtları ve mention'lar burada görünecek.",
             modifier = Modifier.padding(contentPadding),
         )
         PlatformType.PIXELFED -> EmptyState(
-            title = "Pixelfed notifications coming soon",
-            message = "Likes, comments and follows will use the same app shell.",
+            title = "Pixelfed bildirimleri yakında",
+            message = "Beğeniler, yorumlar ve takipler burada görünecek.",
             modifier = Modifier.padding(contentPadding),
         )
     }

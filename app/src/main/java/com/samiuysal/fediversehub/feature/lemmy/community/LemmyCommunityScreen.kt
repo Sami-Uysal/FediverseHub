@@ -52,6 +52,7 @@ import androidx.paging.compose.itemKey
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.samiuysal.fediversehub.core.common.error.userFacingMessage
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppLoading
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
@@ -194,7 +195,7 @@ private fun LemmyCommunityContent(
                 val error = posts.loadState.refresh as LoadState.Error
                 item(key = "community-posts-error", contentType = "community-error") {
                     AppErrorState(
-                        message = error.error.localizedMessage ?: "Community postları yüklenemedi.",
+                        message = error.error.userFacingMessage("Community postları yüklenemedi."),
                         onRetry = posts::retry,
                         modifier = Modifier.height(220.dp),
                     )

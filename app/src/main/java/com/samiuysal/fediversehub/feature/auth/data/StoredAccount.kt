@@ -14,14 +14,14 @@ data class StoredAccount(
     val avatarUrl: String?,
     val accessToken: String?,
 ) {
-    fun toDomain(): Account = Account(
+    fun toDomain(accessTokenOverride: String? = accessToken): Account = Account(
         id = id,
         platform = platform,
         instanceUrl = instanceUrl,
         username = username,
         displayName = displayName,
         avatarUrl = avatarUrl,
-        accessToken = accessToken,
+        accessToken = accessTokenOverride,
     )
 }
 
@@ -32,5 +32,5 @@ fun Account.toStoredAccount(): StoredAccount = StoredAccount(
     username = username,
     displayName = displayName,
     avatarUrl = avatarUrl,
-    accessToken = accessToken,
+    accessToken = null,
 )

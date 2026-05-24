@@ -2,9 +2,10 @@ package com.samiuysal.fediversehub.core.datastore
 
 /**
  * MVP 2 token plan:
- * - Current implementation stores the Mastodon access token with account metadata in DataStore.
- * - Before broad beta, move access tokens to Android Keystore backed encrypted storage.
- * - Keep DataStore for non-sensitive account metadata and encrypted-token lookup keys.
+ * - Access tokens are stored outside DataStore in SecureTokenStore.
+ * - SecureTokenStore encrypts token bytes with Android Keystore backed AES-GCM.
+ * - DataStore keeps non-sensitive account metadata and active-account IDs only.
+ * - Legacy plain DataStore tokens are migrated on startup, then removed from account metadata.
  */
 interface TokenStoragePlan {
     suspend fun readAccessToken(accountId: String): String?
