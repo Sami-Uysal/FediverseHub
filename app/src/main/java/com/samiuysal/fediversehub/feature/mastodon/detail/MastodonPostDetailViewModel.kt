@@ -3,7 +3,6 @@ package com.samiuysal.fediversehub.feature.mastodon.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.samiuysal.fediversehub.core.common.error.userMessage
 import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
@@ -181,7 +180,7 @@ class MastodonPostDetailViewModel @Inject constructor(
                     }
                 }
                 is AppResult.Failure -> {
-                    _uiState.update { MastodonPostDetailUiState.Error(result.error.userMessage()) }
+                    _uiState.update { MastodonPostDetailUiState.Error(result.error.loadErrorMessage()) }
                 }
             }
         }
@@ -215,7 +214,15 @@ class MastodonPostDetailViewModel @Inject constructor(
         AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
         AppError.Network -> "Network failed. Check your connection and retry."
         is AppError.Server -> "Server error $code. Try again shortly."
-        is AppError.Unknown -> message ?: "Reply could not be sent. Try again."
+        is AppError.Unknown -> "Reply could not be sent. Try again."
+    }
+
+    private fun AppError.loadErrorMessage(): String = when (this) {
+        AppError.Unauthorized -> "Session expired. Log in again."
+        AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
+        AppError.Network -> "Network failed. Check your connection and retry."
+        is AppError.Server -> "Server error $code. Try again shortly."
+        is AppError.Unknown -> "Post could not be loaded. Try again."
     }
 
     private fun MastodonPostDetailUiState.Success.replace(

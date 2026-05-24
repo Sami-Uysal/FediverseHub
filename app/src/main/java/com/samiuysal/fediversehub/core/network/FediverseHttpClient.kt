@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 
 object FediverseHttpClient {
     fun create(isDebug: Boolean): HttpClient = HttpClient(Android) {
+        expectSuccess = true
         install(ContentNegotiation) {
             json(
                 Json {

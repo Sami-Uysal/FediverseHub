@@ -98,7 +98,7 @@ class PixelfedAuthRepositoryImpl @Inject constructor(
         accountStore.removeAccount(accountId)
         AppResult.Success(Unit)
     }.getOrElse { throwable ->
-        AppResult.Failure(AppError.Unknown(throwable.message))
+        AppResult.Failure(AppError.Unknown(null))
     }
 
     private fun PixelfedOAuthSession.authorizeUrl(): String =

@@ -111,6 +111,6 @@ class MastodonSearchViewModel @Inject constructor(
         AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
         AppError.Network -> "Network failed. Check your connection and retry."
         is AppError.Server -> "Server error $code. Try again shortly."
-        is AppError.Unknown -> message ?: "Search failed. Try again."
+        is AppError.Unknown -> "Search failed. Try again."
     }
 }

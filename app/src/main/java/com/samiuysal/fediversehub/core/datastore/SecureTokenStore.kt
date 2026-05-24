@@ -34,18 +34,22 @@ class SecureTokenStore @Inject constructor(
 
     fun writeAccessToken(accountId: String, token: String) {
         if (token.isBlank()) return
-        val cipher = Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.ENCRYPT_MODE, secretKey())
+        runCatching {
+            val cipher = Cipher.getInstance(TRANSFORMATION).apply {
+                init(Cipher.ENCRYPT_MODE, secretKey())
+            }
+            val encodedIv = Base64.encodeToString(cipher.iv, Base64.NO_WRAP)
+            val encodedCipherText = Base64.encodeToString(cipher.doFinal(token.encodeToByteArray()), Base64.NO_WRAP)
+            preferences.edit()
+                .putString(accountId.key(), "$encodedIv$SEPARATOR$encodedCipherText")
+                .apply()
         }
-        val encodedIv = Base64.encodeToString(cipher.iv, Base64.NO_WRAP)
-        val encodedCipherText = Base64.encodeToString(cipher.doFinal(token.encodeToByteArray()), Base64.NO_WRAP)
-        preferences.edit()
-            .putString(accountId.key(), "$encodedIv$SEPARATOR$encodedCipherText")
-            .apply()
     }
 
     fun deleteAccessToken(accountId: String) {
-        preferences.edit().remove(accountId.key()).apply()
+        runCatching {
+            preferences.edit().remove(accountId.key()).apply()
+        }
     }
 
     private fun secretKey(): SecretKey {

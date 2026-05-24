@@ -58,7 +58,11 @@ class LemmyKtorApi @Inject constructor(
             parameter("sort", sort)
             parameter("page", page)
             parameter("limit", limit)
-            communityName?.takeIf(String::isNotBlank)?.let { parameter("community_name", it) }
+            communityName?.takeIf(String::isNotBlank)?.let { community ->
+                community.toIntOrNull()?.let { id ->
+                    parameter("community_id", id)
+                } ?: parameter("community_name", community.removePrefix("c/"))
+            }
         }.body()
     }
 
@@ -170,7 +174,9 @@ class LemmyKtorApi @Inject constructor(
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v3/community") {
             withAuth(accessToken)
-            parameter("name", communityName)
+            communityName.removePrefix("c/").toIntOrNull()?.let { id ->
+                parameter("id", id)
+            } ?: parameter("name", communityName.removePrefix("c/"))
         }.body()
     }
 

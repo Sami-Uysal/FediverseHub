@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import android.util.Log
+import com.samiuysal.fediversehub.BuildConfig
 import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
@@ -59,7 +60,7 @@ class HomeViewModel @Inject constructor(
     private val pixelfedRepository: PixelfedRepository,
     private val accountStore: AccountStore,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(MockFediverseData.homeState)
+    private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<HomeEffect>()
     val effects: SharedFlow<HomeEffect> = _effects.asSharedFlow()
@@ -86,14 +87,18 @@ class HomeViewModel @Inject constructor(
         uiState
             .map { state ->
                 state.activeAccount(PlatformType.MASTODON)
-                    ?: fallbackAccount(PlatformType.MASTODON)
+                    ?.takeIf { !it.accessToken.isNullOrBlank() }
             }
             .distinctUntilChanged()
             .flatMapLatest { account ->
-                mastodonRepository
-                    .getHomeTimelinePagingData(account = account)
-                    .map { pagingData ->
-                        pagingData.map(MastodonTimelineMapper::domainToUi)
+                if (account == null) {
+                    flowOf(PagingData.empty())
+                } else {
+                    mastodonRepository
+                        .getHomeTimelinePagingData(account = account)
+                        .map { pagingData ->
+                            pagingData.map(MastodonTimelineMapper::domainToUi)
+                        }
                     }
                 }
             .flowOn(Dispatchers.Default)
@@ -130,11 +135,10 @@ class HomeViewModel @Inject constructor(
             .distinctUntilChanged()
             .flatMapLatest { account ->
                 if (account == null) {
-                    Log.d(TAG, "Pixelfed home skipped: no active token account")
+                    debugLog("Pixelfed home skipped: no active token account")
                     flowOf(PagingData.empty())
                 } else {
-                    Log.d(
-                        TAG,
+                    debugLog(
                         "Pixelfed home loading: account=${account.id}, instance=${account.instanceUrl}, token=true",
                     )
                     pixelfedRepository
@@ -152,7 +156,7 @@ class HomeViewModel @Inject constructor(
             .onEach { (storedAccounts, activeAccountIds) ->
                 _uiState.update { state ->
                     state.copy(
-                        accounts = mergeAccounts(storedAccounts),
+                        accounts = storedAccounts,
                         activeAccountIds = activeAccountIds,
                     )
                 }
@@ -446,17 +450,6 @@ class HomeViewModel @Inject constructor(
         _pixelfedCommentsState.value = null
     }
 
-    private fun mergeAccounts(storedAccounts: List<Account>): List<Account> {
-        val fallbackAccounts = MockFediverseData.homeState.accounts
-            .filterNot { fallback ->
-                storedAccounts.any { it.platform == fallback.platform }
-            }
-        return storedAccounts + fallbackAccounts
-    }
-
-    private fun fallbackAccount(platform: PlatformType): Account =
-        MockFediverseData.homeState.accounts.first { it.platform == platform }
-
     private fun HomeUiState.activeAccount(platform: PlatformType): Account? {
         val platformAccounts = accounts.filter { it.platform == platform }
         return platformAccounts.firstOrNull { it.id == activeAccountIds[platform] }
@@ -494,7 +487,7 @@ class HomeViewModel @Inject constructor(
         AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
         AppError.Network -> "Network failed. Check your connection and retry."
         is AppError.Server -> "Server error $code. Try again shortly."
-        is AppError.Unknown -> message ?: "Reply could not be sent. Try again."
+        is AppError.Unknown -> "Reply could not be sent. Try again."
     }
 
     private fun AppError.postErrorMessage(): String = when (this) {
@@ -502,7 +495,7 @@ class HomeViewModel @Inject constructor(
         AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
         AppError.Network -> "Network failed. Check your connection and retry."
         is AppError.Server -> "Server error $code. Try again shortly."
-        is AppError.Unknown -> message ?: "Post could not be sent. Try again."
+        is AppError.Unknown -> "Post could not be sent. Try again."
     }
 
     private fun AppError.userMessage(fallback: String): String = when (this) {
@@ -510,7 +503,7 @@ class HomeViewModel @Inject constructor(
         AppError.RateLimited -> "Rate limit reached. Wait a moment, then retry."
         AppError.Network -> "Network failed. Check your connection and retry."
         is AppError.Server -> "Server error $code. Try again shortly."
-        is AppError.Unknown -> message ?: fallback
+        is AppError.Unknown -> fallback
     }
 
     private fun MastodonPostUiModel.optimistic(action: MastodonPostActionType): MastodonPostUiModel =
@@ -567,8 +560,11 @@ class HomeViewModel @Inject constructor(
             LemmyPostActionType.SAVE -> copy(isSaved = !isSaved)
         }
 
-    private companion object {
-        const val TAG = "HomeViewModel"
+}
+
+private fun debugLog(message: String) {
+    if (BuildConfig.DEBUG) {
+        Log.d("HomeViewModel", message)
     }
 }
 

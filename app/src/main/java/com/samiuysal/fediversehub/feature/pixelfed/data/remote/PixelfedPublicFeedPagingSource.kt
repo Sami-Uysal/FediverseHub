@@ -3,6 +3,7 @@ package com.samiuysal.fediversehub.feature.pixelfed.data.remote
 import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.samiuysal.fediversehub.BuildConfig
 import com.samiuysal.fediversehub.core.common.error.AppErrorException
 import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedPost
@@ -24,20 +25,22 @@ class PixelfedPublicFeedPagingSource(
             )
             val posts = statuses.map(PixelfedMapper::statusToDomain)
                 .filter { it.media.isNotEmpty() }
-            Log.d(TAG, "Explore page loaded: instance=$instanceUrl, raw=${statuses.size}, media=${posts.size}")
+            debugLog("Explore page loaded: instance=$instanceUrl, raw=${statuses.size}, media=${posts.size}")
             LoadResult.Page(
                 data = posts,
                 prevKey = null,
                 nextKey = statuses.lastOrNull()?.id,
             )
         } catch (throwable: Throwable) {
-            Log.d(TAG, "Explore page failed: instance=$instanceUrl, error=${throwable::class.simpleName}")
+            debugLog("Explore page failed: instance=$instanceUrl, error=${throwable::class.simpleName}")
             LoadResult.Error(AppErrorException(NetworkErrorMapper.map(throwable)))
         }
 
     override fun getRefreshKey(state: PagingState<String, PixelfedPost>): String? = null
 
-    private companion object {
-        const val TAG = "PixelfedExplore"
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG) {
+            Log.d("PixelfedExplore", message)
+        }
     }
 }

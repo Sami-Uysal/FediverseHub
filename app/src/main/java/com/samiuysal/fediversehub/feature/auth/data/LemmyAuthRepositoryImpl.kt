@@ -1,6 +1,7 @@
 package com.samiuysal.fediversehub.feature.auth.data
 
 import android.util.Log
+import com.samiuysal.fediversehub.BuildConfig
 import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
@@ -53,7 +54,9 @@ class LemmyAuthRepositoryImpl @Inject constructor(
             accountStore.saveActiveAccount(PlatformType.LEMMY, account.id)
             AppResult.Success(account)
         } catch (throwable: Throwable) {
-            Log.d(TAG, "Lemmy login failed: ${throwable.message}", throwable)
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Lemmy login failed: ${throwable.message}", throwable)
+            }
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }
     }

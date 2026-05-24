@@ -243,5 +243,5 @@ private fun AppError.lemmyMessage(): String = when (this) {
     AppError.RateLimited -> "Çok hızlı istek atıldı. Biraz bekle."
     AppError.Unauthorized -> "Oturum süresi doldu. Lemmy hesabına tekrar giriş yap."
     is AppError.Server -> "Sunucu hatası $code. Biraz sonra tekrar dene."
-    is AppError.Unknown -> message ?: "Community yüklenemedi."
+    is AppError.Unknown -> "Community yüklenemedi. Tekrar dene."
 }

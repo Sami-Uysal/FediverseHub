@@ -111,7 +111,7 @@ class MastodonAuthRepositoryImpl @Inject constructor(
         }
         AppResult.Success(Unit)
     }.getOrElse { throwable ->
-        AppResult.Failure(AppError.Unknown(throwable.message))
+        AppResult.Failure(AppError.Unknown(null))
     }
 
     private fun MastodonOAuthSession.authorizeUrl(): String =

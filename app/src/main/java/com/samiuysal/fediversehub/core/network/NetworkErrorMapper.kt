@@ -15,6 +15,6 @@ object NetworkErrorMapper {
         }
         is ServerResponseException -> AppError.Server(throwable.response.status.value)
         is IOException -> AppError.Network
-        else -> AppError.Unknown(throwable.message)
+        else -> AppError.Unknown(null)
     }
 }

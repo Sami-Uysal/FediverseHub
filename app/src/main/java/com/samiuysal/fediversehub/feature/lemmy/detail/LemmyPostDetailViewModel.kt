@@ -311,7 +311,7 @@ private fun AppError.lemmyMessage(): String = when (this) {
     AppError.RateLimited -> "Çok hızlı istek atıldı. Biraz bekle."
     AppError.Unauthorized -> "Oturum süresi doldu. Lemmy hesabına tekrar giriş yap."
     is AppError.Server -> "Sunucu hatası $code. Biraz sonra tekrar dene."
-    is AppError.Unknown -> message ?: "Lemmy içeriği yüklenemedi."
+    is AppError.Unknown -> "Lemmy içeriği yüklenemedi. Tekrar dene."
 }
 
 private fun LemmyPostDetailUiState.Success.replaceComment(

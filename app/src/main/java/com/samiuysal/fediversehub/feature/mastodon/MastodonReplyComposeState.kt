@@ -33,3 +33,14 @@ data class MastodonNewPostComposeState(
     val errorMessage: String? = null,
     val maxCharacters: Int = MastodonReplyMaxCharacters,
 )
+
+val MastodonReplyComposeState.canSend: Boolean
+    get() {
+        val trimmed = text.trim()
+        val mention = parent.username.trim()
+        val body = trimmed.removePrefix(mention).trim()
+        return body.isNotBlank() && text.length <= maxCharacters
+    }
+
+val MastodonNewPostComposeState.canSend: Boolean
+    get() = text.trim().isNotBlank() && text.length <= maxCharacters

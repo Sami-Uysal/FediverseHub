@@ -315,7 +315,7 @@ private fun LemmyDetailPost(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
-                modifier = Modifier.clickable { onCommunityClick(post.community) },
+                modifier = Modifier.clickable { onCommunityClick(post.communityId ?: post.community) },
                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                 contentColor = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(AppRadius.full),

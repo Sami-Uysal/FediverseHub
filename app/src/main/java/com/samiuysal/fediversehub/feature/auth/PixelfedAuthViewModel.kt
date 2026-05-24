@@ -104,6 +104,6 @@ class PixelfedAuthViewModel @Inject constructor(
         AppError.RateLimited -> "Instance rate limit reached. Try again later."
         AppError.Unauthorized -> "Pixelfed authorization failed. Please retry login."
         is AppError.Server -> "Server error: $code"
-        is AppError.Unknown -> message ?: "Unexpected auth error."
+        is AppError.Unknown -> "Unexpected auth error."
     }
 }
