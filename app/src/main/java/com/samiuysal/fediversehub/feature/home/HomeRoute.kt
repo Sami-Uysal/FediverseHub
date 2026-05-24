@@ -52,12 +52,14 @@ fun HomeRoute(
     onPlatformSelected: (PlatformType) -> Unit,
     onMastodonPostSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
+    onLemmyPostSelected: (String) -> Unit,
     onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     onMastodonUnauthorized: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val mastodonActionOverrides by viewModel.mastodonActionOverrides.collectAsStateWithLifecycle()
+    val lemmySort by viewModel.lemmySort.collectAsStateWithLifecycle()
     val pixelfedActionOverrides by viewModel.pixelfedActionOverrides.collectAsStateWithLifecycle()
     val pixelfedCommentsState by viewModel.pixelfedCommentsState.collectAsStateWithLifecycle()
     val replyComposeState by viewModel.replyComposeState.collectAsStateWithLifecycle()
@@ -105,13 +107,24 @@ fun HomeRoute(
             }
         },
         lemmyContent = { modifier ->
-            val lemmyPosts = viewModel.lemmyPosts.collectAsLazyPagingItems()
-            LemmyHomeScreen(
-                account = uiState.selectedAccount,
-                posts = lemmyPosts,
-                modifier = modifier,
-                showTopBar = false,
-            )
+            if (uiState.selectedAccount?.accessToken.isNullOrBlank()) {
+                NoAccountHomeCta(
+                    platform = PlatformType.LEMMY,
+                    modifier = modifier,
+                    onLoginClick = onMastodonUnauthorized,
+                )
+            } else {
+                val lemmyPosts = viewModel.lemmyPosts.collectAsLazyPagingItems()
+                LemmyHomeScreen(
+                    account = uiState.selectedAccount,
+                    posts = lemmyPosts,
+                    selectedSort = lemmySort,
+                    modifier = modifier,
+                    showTopBar = false,
+                    onSortSelected = viewModel::selectLemmySort,
+                    onPostClick = onLemmyPostSelected,
+                )
+            }
         },
         pixelfedContent = { modifier ->
             if (uiState.selectedAccount?.accessToken.isNullOrBlank()) {

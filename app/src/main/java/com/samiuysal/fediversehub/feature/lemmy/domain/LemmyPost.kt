@@ -12,6 +12,8 @@ data class LemmyPost(
     val commentCount: Int,
     val previewText: String,
     val comments: List<LemmyComment>,
+    val url: String? = null,
+    val thumbnailUrl: String? = null,
 )
 
 data class LemmyComment(
@@ -21,11 +23,18 @@ data class LemmyComment(
     val content: String,
     val depth: Int,
     val isCollapsed: Boolean,
+    val score: Int = 0,
 )
 
 enum class LemmySortType {
     HOT,
     ACTIVE,
     NEW,
-    TOP_DAY,
+    TOP,
+}
+
+enum class LemmyFeedType {
+    SUBSCRIBED,
+    LOCAL,
+    ALL,
 }

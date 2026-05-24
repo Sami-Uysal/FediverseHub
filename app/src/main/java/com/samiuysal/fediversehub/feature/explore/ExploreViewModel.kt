@@ -10,6 +10,11 @@ import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
+import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
@@ -38,6 +43,7 @@ import kotlinx.coroutines.launch
 class ExploreViewModel @Inject constructor(
     private val mastodonRepository: MastodonRepository,
     private val pixelfedRepository: PixelfedRepository,
+    private val lemmyRepository: LemmyRepository,
     accountStore: AccountStore,
 ) : ViewModel() {
     private val selectedPlatform = MutableStateFlow(PlatformType.MASTODON)
@@ -51,6 +57,10 @@ class ExploreViewModel @Inject constructor(
 
     private val _mastodonState = MutableStateFlow(MastodonExploreUiState())
     val mastodonState: StateFlow<MastodonExploreUiState> = _mastodonState.asStateFlow()
+    private val _lemmyTab = MutableStateFlow(LemmyExploreTab.ALL)
+    val lemmyTab: StateFlow<LemmyExploreTab> = _lemmyTab.asStateFlow()
+    private val _lemmySort = MutableStateFlow(LemmySortType.HOT)
+    val lemmySort: StateFlow<LemmySortType> = _lemmySort.asStateFlow()
 
     private val pixelfedAccount: Flow<Account?> =
         combine(accounts, selectedAccountId, selectedPlatform) { accounts, selectedId, platform ->
@@ -80,6 +90,42 @@ class ExploreViewModel @Inject constructor(
             .flowOn(Dispatchers.Default)
             .cachedIn(viewModelScope)
 
+    private val lemmyAccount: Flow<Account?> =
+        combine(accounts, selectedAccountId, selectedPlatform) { accounts, selectedId, platform ->
+            if (platform != PlatformType.LEMMY) {
+                null
+            } else {
+                accounts.firstOrNull {
+                    it.platform == PlatformType.LEMMY &&
+                        it.id == selectedId &&
+                        !it.accessToken.isNullOrBlank()
+                } ?: accounts.firstOrNull {
+                    it.platform == PlatformType.LEMMY && !it.accessToken.isNullOrBlank()
+                }
+            }
+        }.distinctUntilChanged()
+
+    val lemmyExploreFeed: Flow<PagingData<LemmyPostUiModel>> =
+        combine(lemmyAccount, _lemmySort, _lemmyTab) { account, sort, tab ->
+            Triple(account, sort, tab)
+        }
+            .distinctUntilChanged()
+            .flatMapLatest { (account, sort, tab) ->
+                if (account == null) {
+                    flowOf(PagingData.empty())
+                } else {
+                    lemmyRepository
+                        .getPostsPagingData(
+                            account = account,
+                            sort = sort,
+                            feedType = tab.feedType,
+                        )
+                        .map { pagingData -> pagingData.map(LemmyPostMapper::domainToUi) }
+                }
+            }
+            .flowOn(Dispatchers.Default)
+            .cachedIn(viewModelScope)
+
     fun selectPlatform(platform: PlatformType) {
         selectedPlatform.value = platform
     }
@@ -97,6 +143,14 @@ class ExploreViewModel @Inject constructor(
     fun selectMastodonTab(tab: MastodonExploreTab) {
         _mastodonState.update { it.copy(selectedTab = tab) }
         currentMastodonAccount?.let { loadMastodonTab(it, tab) }
+    }
+
+    fun selectLemmyTab(tab: LemmyExploreTab) {
+        _lemmyTab.value = tab
+    }
+
+    fun selectLemmySort(sort: LemmySortType) {
+        _lemmySort.value = sort
     }
 
     fun refreshMastodon(account: Account?) {
@@ -193,3 +247,10 @@ class ExploreViewModel @Inject constructor(
         }
     }
 }
+
+private val LemmyExploreTab.feedType: LemmyFeedType
+    get() = when (this) {
+        LemmyExploreTab.ALL -> LemmyFeedType.ALL
+        LemmyExploreTab.LOCAL -> LemmyFeedType.LOCAL
+        LemmyExploreTab.COMMUNITIES -> LemmyFeedType.ALL
+    }

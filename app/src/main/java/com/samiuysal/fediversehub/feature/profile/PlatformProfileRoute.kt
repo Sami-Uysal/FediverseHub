@@ -20,6 +20,7 @@ import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.auth.LemmyAuthRoute
 import com.samiuysal.fediversehub.feature.mastodon.profile.MastodonProfileRoute
 import com.samiuysal.fediversehub.feature.pixelfed.profile.PixelfedProfileRoute
 
@@ -118,17 +119,16 @@ private fun ComingSoonProfile(
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = account?.let { "@${it.username} • ${it.instanceUrl}" } ?: "Login coming soon",
+                    text = account?.let { "@${it.username} • ${it.instanceUrl}" } ?: "Login below",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
-        EmptyState(
-            title = "${platform.label} profile coming soon",
-            message = "Mastodon profile is live. ${platform.label} account and profile integration will plug into this shell next.",
+        LemmyAuthRoute(
             modifier = Modifier.weight(1f),
+            showTopBar = false,
         )
     }
 }

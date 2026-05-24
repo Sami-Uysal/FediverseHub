@@ -5,14 +5,16 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,26 +22,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ModeComment
-import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -48,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,6 +57,9 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Precision
 import com.samiuysal.fediversehub.core.designsystem.component.AppErrorState
 import com.samiuysal.fediversehub.core.designsystem.component.AppTopBar
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
@@ -65,16 +69,28 @@ import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.home.MockFediverseData
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LemmyHomeScreen(
     account: Account?,
     posts: LazyPagingItems<LemmyPostUiModel>,
+    selectedSort: LemmySortType,
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
+    onSortSelected: (LemmySortType) -> Unit,
+    onPostClick: (String) -> Unit,
 ) {
+    val isInitialLoading by remember(posts) {
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0
+        }
+    }
     val isRefreshing by remember(posts) {
-        derivedStateOf { posts.loadState.refresh is LoadState.Loading }
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount > 0
+        }
     }
     val refreshError by remember(posts) {
         derivedStateOf { posts.loadState.refresh as? LoadState.Error }
@@ -85,26 +101,35 @@ fun LemmyHomeScreen(
         }
     }
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxSize()) {
         if (showTopBar) {
             LemmyTopBar(account = account, onRefresh = posts::refresh)
         }
-        SortSelector(
-            selectedSort = "Hot",
-            onSortSelected = {},
+        LemmyHomeControls(
+            selectedSort = selectedSort,
+            onSortSelected = onSortSelected,
+            onRefresh = posts::refresh,
         )
 
         when {
-            isRefreshing -> LemmyFeedSkeleton()
-            refreshError != null -> AppErrorState(
-                message = refreshError?.error?.message ?: "Lemmy posts could not be loaded.",
+            isInitialLoading -> LemmyFeedSkeleton(modifier = Modifier.weight(1f))
+            refreshError != null && posts.itemCount == 0 -> AppErrorState(
+                message = refreshError?.error?.message ?: "Lemmy feed yüklenemedi.",
                 onRetry = posts::retry,
+                modifier = Modifier.weight(1f),
             )
             isEmpty -> EmptyState(
-                title = "No Lemmy posts",
-                message = "Community posts will appear here after refresh.",
+                title = "Abonelik yok",
+                message = "Henüz community aboneliğin yok. Keşfet’ten community bulabilirsin.",
+                modifier = Modifier.weight(1f),
             )
-            else -> LemmyPostList(posts = posts)
+            else -> PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = posts::refresh,
+                modifier = Modifier.weight(1f),
+            ) {
+                LemmyPostList(posts = posts, onPostClick = onPostClick)
+            }
         }
     }
 }
@@ -119,27 +144,37 @@ fun LemmyHomeScreenContent(
     onRetry: () -> Unit = {},
     onRefresh: () -> Unit = {},
     showTopBar: Boolean = true,
+    selectedSort: LemmySortType = LemmySortType.HOT,
+    onSortSelected: (LemmySortType) -> Unit = {},
+    onPostClick: (String) -> Unit = {},
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxSize()) {
         if (showTopBar) {
             LemmyTopBar(account = account, onRefresh = onRefresh)
         }
-        SortSelector(
-            selectedSort = "Hot",
-            onSortSelected = {},
+        LemmyHomeControls(
+            selectedSort = selectedSort,
+            onSortSelected = onSortSelected,
+            onRefresh = onRefresh,
         )
 
         when {
-            isLoading -> LemmyFeedSkeleton()
+            isLoading -> LemmyFeedSkeleton(modifier = Modifier.weight(1f))
             errorMessage != null -> AppErrorState(
                 message = errorMessage,
                 onRetry = onRetry,
+                modifier = Modifier.weight(1f),
             )
             posts.isEmpty() -> EmptyState(
-                title = "No Lemmy posts",
-                message = "Community posts will appear here after refresh.",
+                title = "Abonelik yok",
+                message = "Henüz community aboneliğin yok. Keşfet’ten community bulabilirsin.",
+                modifier = Modifier.weight(1f),
             )
-            else -> LemmyPostList(posts = posts)
+            else -> LemmyPostList(
+                posts = posts,
+                onPostClick = onPostClick,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -150,15 +185,15 @@ private fun LemmyTopBar(
     onRefresh: () -> Unit,
 ) {
     AppTopBar(
-        title = "All communities",
-        subtitle = "${account?.instanceUrl.orEmpty()} · front page",
+        title = "Lemmy",
+        subtitle = "${account?.instanceUrl.orEmpty()} · home",
         actions = {
             AssistChip(
                 onClick = onRefresh,
-                label = { Text("Hot") },
+                label = { Text("Yenile") },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        imageVector = Icons.Outlined.Refresh,
                         contentDescription = null,
                     )
                 },
@@ -168,35 +203,51 @@ private fun LemmyTopBar(
 }
 
 @Composable
-private fun SortSelector(
-    selectedSort: String,
-    onSortSelected: (String) -> Unit,
+private fun LemmyHomeControls(
+    selectedSort: LemmySortType,
+    onSortSelected: (LemmySortType) -> Unit,
+    onRefresh: () -> Unit,
 ) {
-    val sorts = remember { listOf("Hot", "Active", "New", "Top") }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
             .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        sorts.forEach { sort ->
+        lemmySortTypes.forEach { sort ->
             FilterChip(
                 selected = selectedSort == sort,
                 onClick = { onSortSelected(sort) },
-                label = { Text(sort) },
+                label = { Text(sort.label) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                     selectedLabelColor = MaterialTheme.colorScheme.primary,
                 ),
             )
         }
+        AssistChip(
+            onClick = onRefresh,
+            label = { Text("Yenile") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Refresh,
+                    contentDescription = null,
+                )
+            },
+        )
     }
 }
 
 @Composable
-private fun LemmyPostList(posts: List<LemmyPostUiModel>) {
+private fun LemmyPostList(
+    posts: List<LemmyPostUiModel>,
+    onPostClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = AppSpacing.lg,
             top = 0.dp,
@@ -210,15 +261,19 @@ private fun LemmyPostList(posts: List<LemmyPostUiModel>) {
             key = { it.id },
             contentType = { "lemmy-post" },
         ) { post ->
-            LemmyPostCard(post = post)
+            LemmyPostCard(post = post, onClick = { onPostClick(post.id) })
         }
     }
 }
 
 @Composable
-private fun LemmyPostList(posts: LazyPagingItems<LemmyPostUiModel>) {
+private fun LemmyPostList(
+    posts: LazyPagingItems<LemmyPostUiModel>,
+    onPostClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = AppSpacing.lg,
             top = 0.dp,
@@ -236,21 +291,21 @@ private fun LemmyPostList(posts: LazyPagingItems<LemmyPostUiModel>) {
             if (post == null) {
                 LemmyPostSkeleton()
             } else {
-                LemmyPostCard(post = post)
+                LemmyPostCard(post = post, onClick = { onPostClick(post.id) })
             }
         }
 
         if (posts.loadState.append is LoadState.Loading) {
-            item(key = "lemmy-append-loading") {
+            item(key = "lemmy-append-loading", contentType = "lemmy-loading") {
                 LemmyPostSkeleton()
             }
         }
 
         val appendError = posts.loadState.append as? LoadState.Error
         if (appendError != null) {
-            item(key = "lemmy-append-error") {
+            item(key = "lemmy-append-error", contentType = "lemmy-error") {
                 AppErrorState(
-                    message = appendError.error.message ?: "More Lemmy posts could not be loaded.",
+                    message = appendError.error.message ?: "Daha fazla Lemmy gönderisi yüklenemedi.",
                     onRetry = posts::retry,
                     modifier = Modifier.height(220.dp),
                 )
@@ -260,21 +315,25 @@ private fun LemmyPostList(posts: LazyPagingItems<LemmyPostUiModel>) {
 }
 
 @Composable
-private fun LemmyPostCard(post: LemmyPostUiModel) {
+private fun LemmyPostCard(
+    post: LemmyPostUiModel,
+    onClick: () -> Unit,
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-        ) {
+        Column {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
                 verticalAlignment = Alignment.Top,
             ) {
-                ScorePillar(score = post.score)
+                ScorePill(score = post.score)
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
@@ -293,13 +352,6 @@ private fun LemmyPostCard(post: LemmyPostUiModel) {
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        IconButton(onClick = {}) {
-                            Icon(
-                                imageVector = Icons.Outlined.MoreHoriz,
-                                contentDescription = "More options",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
                     }
                     Text(
                         text = post.title,
@@ -311,27 +363,24 @@ private fun LemmyPostCard(post: LemmyPostUiModel) {
                         text = "${post.author} · ${post.timeAgo}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = post.previewText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (post.previewText.isNotBlank()) {
+                        Text(
+                            text = post.previewText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    LemmyLinkPreview(post = post)
+                    LemmyMetaRow(comments = post.comments, score = post.score)
                 }
             }
-
-            LemmyMetaRow(
-                comments = post.comments,
-                score = post.score,
-            )
-
-            if (post.nestedComments.isNotEmpty()) {
-                NestedCommentPreview(comments = post.nestedComments.take(3))
-            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f))
         }
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
-        )
     }
 }
 
@@ -347,35 +396,96 @@ private fun CommunityChip(community: String) {
             modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
 @Composable
-private fun ScorePillar(score: Int) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(AppRadius.full))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f))
-            .padding(horizontal = AppSpacing.xxs, vertical = AppSpacing.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs),
+private fun ScorePill(score: Int) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(AppRadius.full),
     ) {
-        Icon(
-            imageVector = Icons.Outlined.KeyboardArrowUp,
-            contentDescription = "Upvote",
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = score.compactMetric(),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Icon(
-            imageVector = Icons.Outlined.KeyboardArrowDown,
-            contentDescription = "Downvote",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(
+            modifier = Modifier
+                .width(48.dp)
+                .padding(vertical = AppSpacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = score.compactMetric(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "puan",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LemmyLinkPreview(post: LemmyPostUiModel) {
+    val thumbnailUrl = post.thumbnailUrl
+    val url = post.url
+    if (thumbnailUrl.isNullOrBlank() && url.isNullOrBlank()) return
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        shape = RoundedCornerShape(AppRadius.md),
+    ) {
+        Row(
+            modifier = Modifier.padding(AppSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!thumbnailUrl.isNullOrBlank()) {
+                val context = LocalContext.current
+                val request = remember(thumbnailUrl) {
+                    ImageRequest.Builder(context)
+                        .data(thumbnailUrl)
+                        .size(360, 220)
+                        .precision(Precision.INEXACT)
+                        .crossfade(false)
+                        .build()
+                }
+                AsyncImage(
+                    model = request,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(width = 96.dp, height = 64.dp)
+                        .clip(RoundedCornerShape(AppRadius.sm)),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+            ) {
+                Text(
+                    text = post.domain ?: "link",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!url.isNullOrBlank()) {
+                    Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -386,104 +496,36 @@ private fun LemmyMetaRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.lg),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.ModeComment,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "${comments.compactMetric()} comments",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = "${score.compactMetric()} points",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
         ) {
             Icon(
-                imageVector = Icons.Outlined.BookmarkBorder,
+                imageVector = Icons.Outlined.ModeComment,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Save",
+                text = "${comments.compactMetric()} yorum",
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Text(
+            text = "${score.compactMetric()} puan",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
 @Composable
-private fun NestedCommentPreview(comments: List<CommentUiModel>) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-                shape = RoundedCornerShape(AppRadius.md),
-            )
-            .padding(AppSpacing.sm),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-    ) {
-        comments.forEach { comment ->
-            Row {
-                if (comment.depth > 0) {
-                    Spacer(Modifier.width((comment.depth * 14).dp))
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(36.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.54f),
-                                shape = RoundedCornerShape(AppRadius.full),
-                            ),
-                    )
-                    Spacer(Modifier.width(AppSpacing.sm))
-                }
-                Column {
-                    Text(
-                        text = comment.author,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                    Text(
-                        text = if (comment.isCollapsed) "Collapsed thread" else comment.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (comment.isCollapsed) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            Color.Unspecified
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LemmyFeedSkeleton() {
+private fun LemmyFeedSkeleton(modifier: Modifier = Modifier) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(AppSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
         userScrollEnabled = false,
@@ -498,10 +540,10 @@ private fun LemmyFeedSkeleton() {
 private fun LemmyPostSkeleton() {
     val transition = rememberInfiniteTransition(label = "lemmySkeleton")
     val alpha by transition.animateFloat(
-        initialValue = 0.36f,
-        targetValue = 0.7f,
+        initialValue = 0.28f,
+        targetValue = 0.56f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 940),
+            animation = tween(durationMillis = 1_100),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "lemmySkeletonAlpha",
@@ -522,7 +564,7 @@ private fun LemmyPostSkeleton() {
             SkeletonBlock(
                 color = color,
                 modifier = Modifier
-                    .size(width = 44.dp, height = 92.dp)
+                    .size(width = 48.dp, height = 54.dp)
                     .clip(RoundedCornerShape(AppRadius.full)),
             )
             Column(
@@ -532,8 +574,8 @@ private fun LemmyPostSkeleton() {
                 SkeletonBlock(
                     color = color,
                     modifier = Modifier
-                        .fillMaxWidth(0.38f)
-                        .height(24.dp),
+                        .fillMaxWidth(0.42f)
+                        .height(22.dp),
                 )
                 SkeletonBlock(
                     color = color,
@@ -550,7 +592,7 @@ private fun LemmyPostSkeleton() {
                 SkeletonBlock(
                     color = color,
                     modifier = Modifier
-                        .fillMaxWidth(0.58f)
+                        .fillMaxWidth(0.62f)
                         .height(16.dp),
                 )
             }
@@ -576,6 +618,21 @@ private fun Int.compactMetric(): String = when {
     else -> toString()
 }
 
+private val lemmySortTypes = listOf(
+    LemmySortType.ACTIVE,
+    LemmySortType.HOT,
+    LemmySortType.NEW,
+    LemmySortType.TOP,
+)
+
+private val LemmySortType.label: String
+    get() = when (this) {
+        LemmySortType.ACTIVE -> "Active"
+        LemmySortType.HOT -> "Hot"
+        LemmySortType.NEW -> "New"
+        LemmySortType.TOP -> "Top"
+    }
+
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun LemmyHomeScreenPreview() {
@@ -591,16 +648,9 @@ fun LemmyHomeScreenPreview() {
 @Composable
 fun LemmyPostCardPreview() {
     FediverseHubTheme {
-        LemmyPostCard(post = MockFediverseData.homeState.lemmyPosts.first())
-    }
-}
-
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-fun LemmyCommentPreview() {
-    FediverseHubTheme {
-        NestedCommentPreview(
-            comments = MockFediverseData.homeState.lemmyPosts.first().nestedComments.take(3),
+        LemmyPostCard(
+            post = MockFediverseData.homeState.lemmyPosts.first(),
+            onClick = {},
         )
     }
 }

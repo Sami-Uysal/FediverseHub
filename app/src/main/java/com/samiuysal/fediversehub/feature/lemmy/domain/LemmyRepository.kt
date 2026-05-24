@@ -9,10 +9,15 @@ interface LemmyRepository {
     fun getPostsPagingData(
         account: Account,
         sort: LemmySortType = LemmySortType.HOT,
+        feedType: LemmyFeedType = LemmyFeedType.ALL,
     ): Flow<PagingData<LemmyPost>>
 
     suspend fun getPosts(
         account: Account,
         page: LemmyPostPage = LemmyPostPage(),
     ): AppResult<List<LemmyPost>>
+
+    suspend fun getPost(account: Account, postId: String): AppResult<LemmyPost>
+
+    suspend fun getComments(account: Account, postId: String): AppResult<List<LemmyComment>>
 }

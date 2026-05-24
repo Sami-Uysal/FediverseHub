@@ -12,6 +12,7 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
@@ -74,6 +75,8 @@ class HomeViewModel @Inject constructor(
     private val _pixelfedCommentsState = MutableStateFlow<PixelfedCommentsState?>(null)
     val pixelfedCommentsState: StateFlow<PixelfedCommentsState?> =
         _pixelfedCommentsState.asStateFlow()
+    private val _lemmySort = MutableStateFlow(LemmySortType.HOT)
+    val lemmySort: StateFlow<LemmySortType> = _lemmySort.asStateFlow()
 
     val mastodonTimeline: Flow<PagingData<MastodonPostUiModel>> =
         uiState
@@ -93,14 +96,25 @@ class HomeViewModel @Inject constructor(
             .cachedIn(viewModelScope)
 
     val lemmyPosts: Flow<PagingData<LemmyPostUiModel>> =
-        lemmyRepository
-            .getPostsPagingData(
-                account = _uiState.value.accounts.first { it.platform == PlatformType.LEMMY },
-                sort = LemmySortType.HOT,
-            )
-            .map { pagingData ->
-                pagingData.map(LemmyPostMapper::domainToUi)
+        combine(uiState, _lemmySort) { state, sort ->
+            state.activeAccount(PlatformType.LEMMY)
+                ?.takeIf { !it.accessToken.isNullOrBlank() } to sort
+        }
+            .distinctUntilChanged()
+            .flatMapLatest { (account, sort) ->
+                if (account == null) {
+                    flowOf(PagingData.empty())
+                } else {
+                    lemmyRepository
+                        .getPostsPagingData(
+                            account = account,
+                            sort = sort,
+                            feedType = LemmyFeedType.SUBSCRIBED,
+                        )
+                        .map { pagingData -> pagingData.map(LemmyPostMapper::domainToUi) }
+                }
             }
+            .flowOn(Dispatchers.Default)
             .cachedIn(viewModelScope)
 
     val pixelfedFeed: Flow<PagingData<PixelfedPostUiModel>> =
@@ -326,6 +340,10 @@ class HomeViewModel @Inject constructor(
         _uiState.update {
             it.copy(activeAccountIds = it.activeAccountIds + (account.platform to account.id))
         }
+    }
+
+    fun selectLemmySort(sort: LemmySortType) {
+        _lemmySort.value = sort
     }
 
     fun onPixelfedLike(post: PixelfedPostUiModel) {

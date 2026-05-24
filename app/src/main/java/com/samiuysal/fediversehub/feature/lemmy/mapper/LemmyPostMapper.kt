@@ -17,14 +17,17 @@ object LemmyPostMapper {
         comments = domain.commentCount,
         previewText = domain.previewText,
         nestedComments = domain.comments.map(::commentToUi),
+        url = domain.url,
+        thumbnailUrl = domain.thumbnailUrl,
     )
 
-    private fun commentToUi(comment: LemmyComment): CommentUiModel = CommentUiModel(
+    fun commentToUi(comment: LemmyComment): CommentUiModel = CommentUiModel(
         id = comment.id,
         parentId = comment.parentId,
         author = comment.authorName,
         text = comment.content,
         depth = comment.depth,
         isCollapsed = comment.isCollapsed,
+        score = comment.score,
     )
 }

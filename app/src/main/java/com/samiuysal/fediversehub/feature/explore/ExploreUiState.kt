@@ -11,6 +11,12 @@ enum class MastodonExploreTab {
     LINKS,
 }
 
+enum class LemmyExploreTab {
+    ALL,
+    LOCAL,
+    COMMUNITIES,
+}
+
 @Immutable
 data class MastodonExploreUiState(
     val selectedTab: MastodonExploreTab = MastodonExploreTab.POSTS,

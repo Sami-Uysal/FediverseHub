@@ -14,6 +14,8 @@ data class LemmyPostUiModel(
     val comments: Int,
     val previewText: String,
     val nestedComments: List<CommentUiModel>,
+    val url: String? = null,
+    val thumbnailUrl: String? = null,
 )
 
 @Immutable
@@ -24,4 +26,5 @@ data class CommentUiModel(
     val text: String,
     val depth: Int,
     val isCollapsed: Boolean,
+    val score: Int = 0,
 )

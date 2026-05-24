@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -59,6 +60,8 @@ import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTrendLink
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
@@ -70,11 +73,14 @@ fun ExploreRoute(
     contentPadding: PaddingValues,
     onPostSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
+    onLemmyPostSelected: (String) -> Unit,
     onHashtagSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     viewModel: ExploreViewModel = hiltViewModel(),
 ) {
     val mastodonState by viewModel.mastodonState.collectAsStateWithLifecycle()
+    val lemmyTab by viewModel.lemmyTab.collectAsStateWithLifecycle()
+    val lemmySort by viewModel.lemmySort.collectAsStateWithLifecycle()
 
     LaunchedEffect(selectedPlatform) {
         viewModel.selectPlatform(selectedPlatform)
@@ -103,13 +109,19 @@ fun ExploreRoute(
                 onMediaSelected = onMediaSelected,
             )
         }
-        PlatformType.LEMMY -> EmptyState(
-            title = "Lemmy keşfet yakında",
-            message = "Lemmy Explore sonraki adım.",
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
-        )
+        PlatformType.LEMMY -> {
+            val posts = viewModel.lemmyExploreFeed.collectAsLazyPagingItems()
+            LemmyExploreContent(
+                account = selectedAccount,
+                posts = posts,
+                selectedTab = lemmyTab,
+                selectedSort = lemmySort,
+                contentPadding = contentPadding,
+                onTabSelected = viewModel::selectLemmyTab,
+                onSortSelected = viewModel::selectLemmySort,
+                onPostSelected = onLemmyPostSelected,
+            )
+        }
     }
 }
 
@@ -354,6 +366,262 @@ private fun MastodonExploreLinks(
 }
 
 @Composable
+private fun LemmyExploreContent(
+    account: Account?,
+    posts: androidx.paging.compose.LazyPagingItems<LemmyPostUiModel>,
+    selectedTab: LemmyExploreTab,
+    selectedSort: LemmySortType,
+    contentPadding: PaddingValues,
+    onTabSelected: (LemmyExploreTab) -> Unit,
+    onSortSelected: (LemmySortType) -> Unit,
+    onPostSelected: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+    ) {
+        ExploreHeader(
+            title = "Lemmy Keşfet",
+            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Lemmy hesabı yok",
+        )
+        LemmyExploreTabs(
+            selectedTab = selectedTab,
+            onTabSelected = onTabSelected,
+        )
+        LemmyExploreSort(
+            selectedSort = selectedSort,
+            onSortSelected = onSortSelected,
+        )
+        when {
+            account?.accessToken.isNullOrBlank() -> EmptyState(
+                title = "Lemmy hesabı bağlı değil",
+                message = "Lemmy keşfet için önce giriş yap.",
+                modifier = Modifier.weight(1f),
+            )
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> AppLoading(
+                message = "Lemmy keşfet yükleniyor...",
+                modifier = Modifier.weight(1f),
+            )
+            posts.loadState.refresh is LoadState.Error && posts.itemCount == 0 -> {
+                val error = posts.loadState.refresh as LoadState.Error
+                AppErrorState(
+                    message = error.error.localizedMessage ?: "Lemmy keşfet yüklenemedi.",
+                    onRetry = posts::retry,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            selectedTab == LemmyExploreTab.COMMUNITIES -> LemmyCommunitiesDiscovery(
+                posts = posts.itemSnapshotList.items,
+                modifier = Modifier.weight(1f),
+            )
+            posts.itemCount == 0 -> EmptyState(
+                title = "Gönderi yok",
+                message = "Bu keşif akışı şu an boş.",
+                modifier = Modifier.weight(1f),
+            )
+            else -> LemmyExplorePostList(
+                posts = posts,
+                onPostSelected = onPostSelected,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LemmyExploreTabs(
+    selectedTab: LemmyExploreTab,
+    onTabSelected: (LemmyExploreTab) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+    ) {
+        LemmyExploreTab.entries.forEach { tab ->
+            FilterChip(
+                selected = tab == selectedTab,
+                onClick = { onTabSelected(tab) },
+                label = { Text(tab.label) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LemmyExploreSort(
+    selectedSort: LemmySortType,
+    onSortSelected: (LemmySortType) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+    ) {
+        lemmySortTypes.forEach { sort ->
+            AssistChip(
+                onClick = { onSortSelected(sort) },
+                label = {
+                    Text(
+                        text = sort.label,
+                        fontWeight = if (selectedSort == sort) FontWeight.Bold else FontWeight.Normal,
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LemmyExplorePostList(
+    posts: androidx.paging.compose.LazyPagingItems<LemmyPostUiModel>,
+    onPostSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = AppSpacing.sm),
+    ) {
+        items(
+            count = posts.itemCount,
+            key = posts.itemKey { it.id },
+            contentType = posts.itemContentType { "lemmy-explore-post" },
+        ) { index ->
+            posts[index]?.let { post ->
+                LemmyExplorePostCard(
+                    post = post,
+                    onClick = { onPostSelected(post.id) },
+                )
+            }
+        }
+        if (posts.loadState.append is LoadState.Loading) {
+            item(key = "lemmy-explore-append-loading", contentType = "lemmy-explore-loading") {
+                AppLoading(message = "Daha fazla yükleniyor...", modifier = Modifier.height(96.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LemmyExplorePostCard(
+    post: LemmyPostUiModel,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+    ) {
+        LemmyExploreThumbnail(post = post)
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+        ) {
+            Text(
+                text = "c/${post.community} · ${post.domain ?: "self"}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = post.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${post.author} · ${post.timeAgo}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
+                Text("${post.score.compactMetric()} puan", style = MaterialTheme.typography.labelMedium)
+                Text("${post.comments.compactMetric()} yorum", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
+}
+
+@Composable
+private fun LemmyExploreThumbnail(post: LemmyPostUiModel) {
+    val thumbnailUrl = post.thumbnailUrl
+    if (thumbnailUrl.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.sm))
+                .padding(1.dp),
+        )
+        return
+    }
+    val context = LocalContext.current
+    val request = remember(context, thumbnailUrl) {
+        ImageRequest.Builder(context)
+            .data(thumbnailUrl)
+            .size(160, 160)
+            .precision(Precision.INEXACT)
+            .crossfade(false)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .build()
+    }
+    AsyncImage(
+        model = request,
+        contentDescription = null,
+        modifier = Modifier
+            .size(72.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.sm)),
+        contentScale = ContentScale.Crop,
+    )
+}
+
+@Composable
+private fun LemmyCommunitiesDiscovery(
+    posts: List<LemmyPostUiModel>,
+    modifier: Modifier = Modifier,
+) {
+    val communities = remember(posts) {
+        posts
+            .distinctBy { it.community }
+            .sortedBy { it.community.lowercase() }
+    }
+    if (communities.isEmpty()) {
+        EmptyState(
+            title = "Community bulunamadı",
+            message = "All akışından community listesi oluşunca burada görünür.",
+            modifier = modifier,
+        )
+        return
+    }
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(AppSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+    ) {
+        items(
+            items = communities,
+            key = { it.community },
+            contentType = { "lemmy-community-discovery" },
+        ) { post ->
+            AssistChip(
+                onClick = {},
+                label = { Text("c/${post.community}") },
+            )
+        }
+    }
+}
+
+@Composable
 private fun PixelfedExploreContent(
     account: Account?,
     posts: androidx.paging.compose.LazyPagingItems<PixelfedPostUiModel>,
@@ -456,6 +724,28 @@ private val MastodonExploreTab.label: String
         MastodonExploreTab.POSTS -> "Posts"
         MastodonExploreTab.TAGS -> "Tags"
         MastodonExploreTab.LINKS -> "Links"
+    }
+
+private val LemmyExploreTab.label: String
+    get() = when (this) {
+        LemmyExploreTab.ALL -> "All"
+        LemmyExploreTab.LOCAL -> "Local"
+        LemmyExploreTab.COMMUNITIES -> "Communities"
+    }
+
+private val lemmySortTypes = listOf(
+    LemmySortType.ACTIVE,
+    LemmySortType.HOT,
+    LemmySortType.NEW,
+    LemmySortType.TOP,
+)
+
+private val LemmySortType.label: String
+    get() = when (this) {
+        LemmySortType.ACTIVE -> "Active"
+        LemmySortType.HOT -> "Hot"
+        LemmySortType.NEW -> "New"
+        LemmySortType.TOP -> "Top"
     }
 
 private fun Int.compactMetric(): String = when {

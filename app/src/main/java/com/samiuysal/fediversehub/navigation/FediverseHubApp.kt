@@ -22,6 +22,7 @@ import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
 import com.samiuysal.fediversehub.feature.explore.ExploreRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
+import com.samiuysal.fediversehub.feature.lemmy.detail.LemmyPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
 import com.samiuysal.fediversehub.feature.notifications.PlatformNotificationsRoute
@@ -95,6 +96,9 @@ fun FediverseHubApp(
                     onPixelfedPostSelected = { postId ->
                         navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
                     },
+                    onLemmyPostSelected = { postId ->
+                        navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
+                    },
                     onMastodonMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
@@ -132,6 +136,9 @@ fun FediverseHubApp(
                     },
                     onPixelfedPostSelected = { postId ->
                         navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
+                    onLemmyPostSelected = { postId ->
+                        navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
                     },
                     onHashtagSelected = { hashtag ->
                         navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
@@ -235,6 +242,24 @@ fun FediverseHubApp(
                     onMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
+                    onUnauthorized = {
+                        navController.navigate(AppDestination.PROFILE) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            composable(
+                route = AppDestination.LEMMY_POST_DETAIL,
+                arguments = listOf(
+                    navArgument(AppDestination.POST_ID_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) {
+                LemmyPostDetailRoute(
+                    contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
                     onUnauthorized = {
                         navController.navigate(AppDestination.PROFILE) {
                             launchSingleTop = true
