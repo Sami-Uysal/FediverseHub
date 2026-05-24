@@ -25,11 +25,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ModeComment
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -77,10 +82,13 @@ fun LemmyHomeScreen(
     account: Account?,
     posts: LazyPagingItems<LemmyPostUiModel>,
     selectedSort: LemmySortType,
+    actionOverrides: Map<String, LemmyPostUiModel>,
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     onSortSelected: (LemmySortType) -> Unit,
     onPostClick: (String) -> Unit,
+    onCommunityClick: (String) -> Unit,
+    onPostAction: (LemmyPostUiModel, LemmyPostActionType) -> Unit,
 ) {
     val isInitialLoading by remember(posts) {
         derivedStateOf {
@@ -128,7 +136,13 @@ fun LemmyHomeScreen(
                 onRefresh = posts::refresh,
                 modifier = Modifier.weight(1f),
             ) {
-                LemmyPostList(posts = posts, onPostClick = onPostClick)
+                LemmyPostList(
+                    posts = posts,
+                    actionOverrides = actionOverrides,
+                    onPostClick = onPostClick,
+                    onCommunityClick = onCommunityClick,
+                    onPostAction = onPostAction,
+                )
             }
         }
     }
@@ -147,6 +161,8 @@ fun LemmyHomeScreenContent(
     selectedSort: LemmySortType = LemmySortType.HOT,
     onSortSelected: (LemmySortType) -> Unit = {},
     onPostClick: (String) -> Unit = {},
+    onCommunityClick: (String) -> Unit = {},
+    onPostAction: (LemmyPostUiModel, LemmyPostActionType) -> Unit = { _, _ -> },
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         if (showTopBar) {
@@ -173,6 +189,8 @@ fun LemmyHomeScreenContent(
             else -> LemmyPostList(
                 posts = posts,
                 onPostClick = onPostClick,
+                onCommunityClick = onCommunityClick,
+                onPostAction = onPostAction,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -244,6 +262,8 @@ private fun LemmyHomeControls(
 private fun LemmyPostList(
     posts: List<LemmyPostUiModel>,
     onPostClick: (String) -> Unit,
+    onCommunityClick: (String) -> Unit,
+    onPostAction: (LemmyPostUiModel, LemmyPostActionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -261,7 +281,12 @@ private fun LemmyPostList(
             key = { it.id },
             contentType = { "lemmy-post" },
         ) { post ->
-            LemmyPostCard(post = post, onClick = { onPostClick(post.id) })
+            LemmyPostCard(
+                post = post,
+                onClick = { onPostClick(post.id) },
+                onCommunityClick = { onCommunityClick(post.community) },
+                onPostAction = onPostAction,
+            )
         }
     }
 }
@@ -269,7 +294,10 @@ private fun LemmyPostList(
 @Composable
 private fun LemmyPostList(
     posts: LazyPagingItems<LemmyPostUiModel>,
+    actionOverrides: Map<String, LemmyPostUiModel>,
     onPostClick: (String) -> Unit,
+    onCommunityClick: (String) -> Unit,
+    onPostAction: (LemmyPostUiModel, LemmyPostActionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -291,7 +319,13 @@ private fun LemmyPostList(
             if (post == null) {
                 LemmyPostSkeleton()
             } else {
-                LemmyPostCard(post = post, onClick = { onPostClick(post.id) })
+                val visiblePost = actionOverrides[post.id] ?: post
+                LemmyPostCard(
+                    post = visiblePost,
+                    onClick = { onPostClick(visiblePost.id) },
+                    onCommunityClick = { onCommunityClick(visiblePost.community) },
+                    onPostAction = onPostAction,
+                )
             }
         }
 
@@ -318,6 +352,8 @@ private fun LemmyPostList(
 private fun LemmyPostCard(
     post: LemmyPostUiModel,
     onClick: () -> Unit,
+    onCommunityClick: () -> Unit,
+    onPostAction: (LemmyPostUiModel, LemmyPostActionType) -> Unit,
 ) {
     Surface(
         modifier = Modifier
@@ -333,7 +369,15 @@ private fun LemmyPostCard(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
                 verticalAlignment = Alignment.Top,
             ) {
-                ScorePill(score = post.score)
+                VoteRail(
+                    score = post.score,
+                    isUpvoted = post.isUpvoted,
+                    isDownvoted = post.isDownvoted,
+                    isLoadingUpvote = post.loadingAction == LemmyPostActionType.UPVOTE,
+                    isLoadingDownvote = post.loadingAction == LemmyPostActionType.DOWNVOTE,
+                    onUpvote = { onPostAction(post, LemmyPostActionType.UPVOTE) },
+                    onDownvote = { onPostAction(post, LemmyPostActionType.DOWNVOTE) },
+                )
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
@@ -342,7 +386,10 @@ private fun LemmyPostCard(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CommunityChip(community = post.community)
+                        CommunityChip(
+                            community = post.community,
+                            onClick = onCommunityClick,
+                        )
                         Spacer(Modifier.width(AppSpacing.sm))
                         Text(
                             text = post.domain ?: "self",
@@ -376,7 +423,13 @@ private fun LemmyPostCard(
                         )
                     }
                     LemmyLinkPreview(post = post)
-                    LemmyMetaRow(comments = post.comments, score = post.score)
+                    LemmyMetaRow(
+                        comments = post.comments,
+                        score = post.score,
+                        isSaved = post.isSaved,
+                        isLoadingSave = post.loadingAction == LemmyPostActionType.SAVE,
+                        onSaveClick = { onPostAction(post, LemmyPostActionType.SAVE) },
+                    )
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f))
@@ -385,8 +438,12 @@ private fun LemmyPostCard(
 }
 
 @Composable
-private fun CommunityChip(community: String) {
+private fun CommunityChip(
+    community: String,
+    onClick: () -> Unit,
+) {
     Surface(
+        modifier = Modifier.clickable(onClick = onClick),
         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
         contentColor = MaterialTheme.colorScheme.primary,
         shape = RoundedCornerShape(AppRadius.full),
@@ -403,7 +460,15 @@ private fun CommunityChip(community: String) {
 }
 
 @Composable
-private fun ScorePill(score: Int) {
+private fun VoteRail(
+    score: Int,
+    isUpvoted: Boolean,
+    isDownvoted: Boolean,
+    isLoadingUpvote: Boolean,
+    isLoadingDownvote: Boolean,
+    onUpvote: () -> Unit,
+    onDownvote: () -> Unit,
+) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -415,15 +480,51 @@ private fun ScorePill(score: Int) {
                 .padding(vertical = AppSpacing.sm),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            IconButtonSmall(
+                isLoading = isLoadingUpvote,
+                enabled = !isLoadingDownvote,
+                icon = Icons.Outlined.KeyboardArrowUp,
+                isHighlighted = isUpvoted,
+                onClick = onUpvote,
+            )
             Text(
                 text = score.compactMetric(),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
             )
-            Text(
-                text = "puan",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            IconButtonSmall(
+                isLoading = isLoadingDownvote,
+                enabled = !isLoadingUpvote,
+                icon = Icons.Outlined.KeyboardArrowDown,
+                isHighlighted = isDownvoted,
+                onClick = onDownvote,
+            )
+        }
+    }
+}
+
+@Composable
+private fun IconButtonSmall(
+    isLoading: Boolean,
+    enabled: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isHighlighted: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(RoundedCornerShape(AppRadius.full))
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -493,6 +594,9 @@ private fun LemmyLinkPreview(post: LemmyPostUiModel) {
 private fun LemmyMetaRow(
     comments: Int,
     score: Int,
+    isSaved: Boolean,
+    isLoadingSave: Boolean,
+    onSaveClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -519,6 +623,27 @@ private fun LemmyMetaRow(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(modifier = Modifier.weight(1f))
+        Row(
+            modifier = Modifier.clickable(enabled = !isLoadingSave, onClick = onSaveClick),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+        ) {
+            if (isLoadingSave) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(
+                    imageVector = if (isSaved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = null,
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = if (isSaved) "Saved" else "Save",
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -651,6 +776,8 @@ fun LemmyPostCardPreview() {
         LemmyPostCard(
             post = MockFediverseData.homeState.lemmyPosts.first(),
             onClick = {},
+            onCommunityClick = {},
+            onPostAction = { _, _ -> },
         )
     }
 }

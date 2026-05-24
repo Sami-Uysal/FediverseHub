@@ -1,6 +1,7 @@
 package com.samiuysal.fediversehub.feature.lemmy.data.mock
 
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyComment
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyCommunity
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 
 object MockLemmyData {
@@ -8,6 +9,7 @@ object MockLemmyData {
         LemmyPost(
             id = "l1",
             title = "What is the cleanest way to cache multiple Fediverse account feeds?",
+            communityId = "101",
             communityName = "androiddev",
             communityActorId = "androiddev@lemmy.world",
             domain = "self.lemmy.world",
@@ -25,6 +27,7 @@ object MockLemmyData {
         LemmyPost(
             id = "l2",
             title = "Show HN: A Compose comment tree using flattened rows",
+            communityId = "102",
             communityName = "programming",
             communityActorId = "programming@lemmy.ml",
             domain = "github.com",
@@ -41,6 +44,7 @@ object MockLemmyData {
         LemmyPost(
             id = "l3",
             title = "Sync-style dense cards still feel better for link-heavy communities",
+            communityId = "103",
             communityName = "fediverse",
             communityActorId = "fediverse@lemmy.world",
             domain = "blog.example.dev",
@@ -54,6 +58,7 @@ object MockLemmyData {
         LemmyPost(
             id = "l4",
             title = "A practical Room + Paging boundary for offline first Reddit-like feeds",
+            communityId = "104",
             communityName = "kotlin",
             communityActorId = "kotlin@programming.dev",
             domain = "medium.example",
@@ -67,4 +72,33 @@ object MockLemmyData {
             ),
         ),
     )
+
+    fun communityFor(name: String): LemmyCommunity =
+        posts.firstOrNull { it.communityName == name }?.let { post ->
+            LemmyCommunity(
+                id = post.communityId.orEmpty(),
+                name = post.communityName,
+                title = post.communityName.replaceFirstChar { it.uppercase() },
+                actorId = post.communityActorId,
+                description = "Popular ${post.communityName} community.",
+                iconUrl = null,
+                bannerUrl = null,
+                subscribers = 12_400,
+                posts = 1_240,
+                comments = 8_920,
+                subscribed = false,
+            )
+        } ?: LemmyCommunity(
+            id = "103",
+            name = name,
+            title = name.replaceFirstChar { it.uppercase() },
+            actorId = "$name@lemmy.world",
+            description = "Community detail preview.",
+            iconUrl = null,
+            bannerUrl = null,
+            subscribers = 1_000,
+            posts = 120,
+            comments = 640,
+            subscribed = false,
+        )
 }

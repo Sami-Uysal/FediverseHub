@@ -22,6 +22,7 @@ import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
 import com.samiuysal.fediversehub.feature.explore.ExploreRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
+import com.samiuysal.fediversehub.feature.lemmy.community.LemmyCommunityRoute
 import com.samiuysal.fediversehub.feature.lemmy.detail.LemmyPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
@@ -99,6 +100,9 @@ fun FediverseHubApp(
                     onLemmyPostSelected = { postId ->
                         navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
                     },
+                    onLemmyCommunitySelected = { communityName ->
+                        navController.navigate(AppDestination.lemmyCommunity(Uri.encode(communityName)))
+                    },
                     onMastodonMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
@@ -139,6 +143,9 @@ fun FediverseHubApp(
                     },
                     onLemmyPostSelected = { postId ->
                         navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
+                    },
+                    onLemmyCommunitySelected = { communityName ->
+                        navController.navigate(AppDestination.lemmyCommunity(Uri.encode(communityName)))
                     },
                     onHashtagSelected = { hashtag ->
                         navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
@@ -260,6 +267,30 @@ fun FediverseHubApp(
                 LemmyPostDetailRoute(
                     contentPadding = contentPadding,
                     onBack = navController::navigateUp,
+                    onCommunitySelected = { communityName ->
+                        navController.navigate(AppDestination.lemmyCommunity(Uri.encode(communityName)))
+                    },
+                    onUnauthorized = {
+                        navController.navigate(AppDestination.PROFILE) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            composable(
+                route = AppDestination.LEMMY_COMMUNITY_DETAIL,
+                arguments = listOf(
+                    navArgument(AppDestination.COMMUNITY_NAME_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) {
+                LemmyCommunityRoute(
+                    contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
+                    },
                     onUnauthorized = {
                         navController.navigate(AppDestination.PROFILE) {
                             launchSingleTop = true

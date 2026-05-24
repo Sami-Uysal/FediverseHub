@@ -53,12 +53,14 @@ fun HomeRoute(
     onMastodonPostSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
     onLemmyPostSelected: (String) -> Unit,
+    onLemmyCommunitySelected: (String) -> Unit,
     onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     onMastodonUnauthorized: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val mastodonActionOverrides by viewModel.mastodonActionOverrides.collectAsStateWithLifecycle()
+    val lemmyActionOverrides by viewModel.lemmyActionOverrides.collectAsStateWithLifecycle()
     val lemmySort by viewModel.lemmySort.collectAsStateWithLifecycle()
     val pixelfedActionOverrides by viewModel.pixelfedActionOverrides.collectAsStateWithLifecycle()
     val pixelfedCommentsState by viewModel.pixelfedCommentsState.collectAsStateWithLifecycle()
@@ -119,10 +121,13 @@ fun HomeRoute(
                     account = uiState.selectedAccount,
                     posts = lemmyPosts,
                     selectedSort = lemmySort,
+                    actionOverrides = lemmyActionOverrides,
                     modifier = modifier,
                     showTopBar = false,
                     onSortSelected = viewModel::selectLemmySort,
                     onPostClick = onLemmyPostSelected,
+                    onCommunityClick = onLemmyCommunitySelected,
+                    onPostAction = viewModel::onLemmyAction,
                 )
             }
         },

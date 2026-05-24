@@ -11,6 +11,7 @@ import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostActionType
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
@@ -77,6 +78,9 @@ class HomeViewModel @Inject constructor(
         _pixelfedCommentsState.asStateFlow()
     private val _lemmySort = MutableStateFlow(LemmySortType.HOT)
     val lemmySort: StateFlow<LemmySortType> = _lemmySort.asStateFlow()
+    private val _lemmyActionOverrides = MutableStateFlow<Map<String, LemmyPostUiModel>>(emptyMap())
+    val lemmyActionOverrides: StateFlow<Map<String, LemmyPostUiModel>> =
+        _lemmyActionOverrides.asStateFlow()
 
     val mastodonTimeline: Flow<PagingData<MastodonPostUiModel>> =
         uiState
@@ -346,6 +350,43 @@ class HomeViewModel @Inject constructor(
         _lemmySort.value = sort
     }
 
+    fun onLemmyAction(post: LemmyPostUiModel, action: LemmyPostActionType) {
+        val account = _uiState.value.activeAccount(PlatformType.LEMMY) ?: return
+        val before = _lemmyActionOverrides.value[post.id] ?: post
+        val optimistic = before.optimistic(action).copy(loadingAction = action)
+        setLemmyOverride(optimistic)
+        viewModelScope.launch {
+            val result = when (action) {
+                LemmyPostActionType.UPVOTE -> lemmyRepository.votePost(
+                    account = account,
+                    postId = post.id,
+                    score = if (before.isUpvoted) 0 else 1,
+                )
+                LemmyPostActionType.DOWNVOTE -> lemmyRepository.votePost(
+                    account = account,
+                    postId = post.id,
+                    score = if (before.isDownvoted) 0 else -1,
+                )
+                LemmyPostActionType.SAVE -> lemmyRepository.savePost(
+                    account = account,
+                    postId = post.id,
+                    saved = !before.isSaved,
+                )
+            }
+            when (result) {
+                is AppResult.Success -> {
+                    setLemmyOverride(LemmyPostMapper.domainToUi(result.data).copy(loadingAction = null))
+                }
+                is AppResult.Failure -> {
+                    setLemmyOverride(before.copy(loadingAction = null))
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                    }
+                }
+            }
+        }
+    }
+
     fun onPixelfedLike(post: PixelfedPostUiModel) {
         val account = _uiState.value.activeAccount(PlatformType.PIXELFED)
             ?: return
@@ -434,6 +475,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun setLemmyOverride(post: LemmyPostUiModel) {
+        _lemmyActionOverrides.update { overrides ->
+            overrides + (post.id to post)
+        }
+    }
+
     private fun openReplyCompose(post: MastodonPostUiModel) {
         val mention = post.username.takeIf { it.startsWith("@") } ?: "@${post.username}"
         _replyComposeState.value = MastodonReplyComposeState(
@@ -490,6 +537,35 @@ class HomeViewModel @Inject constructor(
         isFavourited = confirmed.isFavourited,
         isBookmarked = confirmed.isBookmarked,
     )
+
+    private fun LemmyPostUiModel.optimistic(action: LemmyPostActionType): LemmyPostUiModel =
+        when (action) {
+            LemmyPostActionType.UPVOTE -> {
+                val nextUpvoted = !isUpvoted
+                copy(
+                    isUpvoted = nextUpvoted,
+                    isDownvoted = false,
+                    score = score + when {
+                        nextUpvoted && isDownvoted -> 2
+                        nextUpvoted -> 1
+                        else -> -1
+                    },
+                )
+            }
+            LemmyPostActionType.DOWNVOTE -> {
+                val nextDownvoted = !isDownvoted
+                copy(
+                    isDownvoted = nextDownvoted,
+                    isUpvoted = false,
+                    score = score + when {
+                        nextDownvoted && isUpvoted -> -2
+                        nextDownvoted -> -1
+                        else -> 1
+                    },
+                )
+            }
+            LemmyPostActionType.SAVE -> copy(isSaved = !isSaved)
+        }
 
     private companion object {
         const val TAG = "HomeViewModel"

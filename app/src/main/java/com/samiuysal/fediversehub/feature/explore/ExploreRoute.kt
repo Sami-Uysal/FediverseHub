@@ -22,15 +22,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -60,6 +64,7 @@ import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.lemmy.LemmyCommunityUiModel
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
@@ -74,6 +79,7 @@ fun ExploreRoute(
     onPostSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
     onLemmyPostSelected: (String) -> Unit,
+    onLemmyCommunitySelected: (String) -> Unit,
     onHashtagSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     viewModel: ExploreViewModel = hiltViewModel(),
@@ -81,6 +87,7 @@ fun ExploreRoute(
     val mastodonState by viewModel.mastodonState.collectAsStateWithLifecycle()
     val lemmyTab by viewModel.lemmyTab.collectAsStateWithLifecycle()
     val lemmySort by viewModel.lemmySort.collectAsStateWithLifecycle()
+    val lemmyCommunitiesState by viewModel.lemmyCommunitiesState.collectAsStateWithLifecycle()
 
     LaunchedEffect(selectedPlatform) {
         viewModel.selectPlatform(selectedPlatform)
@@ -116,10 +123,13 @@ fun ExploreRoute(
                 posts = posts,
                 selectedTab = lemmyTab,
                 selectedSort = lemmySort,
+                communitiesState = lemmyCommunitiesState,
                 contentPadding = contentPadding,
                 onTabSelected = viewModel::selectLemmyTab,
                 onSortSelected = viewModel::selectLemmySort,
+                onRetryCommunities = viewModel::refreshLemmyCommunities,
                 onPostSelected = onLemmyPostSelected,
+                onCommunitySelected = onLemmyCommunitySelected,
             )
         }
     }
@@ -371,10 +381,13 @@ private fun LemmyExploreContent(
     posts: androidx.paging.compose.LazyPagingItems<LemmyPostUiModel>,
     selectedTab: LemmyExploreTab,
     selectedSort: LemmySortType,
+    communitiesState: LemmyCommunitiesUiState,
     contentPadding: PaddingValues,
     onTabSelected: (LemmyExploreTab) -> Unit,
     onSortSelected: (LemmySortType) -> Unit,
+    onRetryCommunities: () -> Unit,
     onPostSelected: (String) -> Unit,
+    onCommunitySelected: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -412,7 +425,9 @@ private fun LemmyExploreContent(
                 )
             }
             selectedTab == LemmyExploreTab.COMMUNITIES -> LemmyCommunitiesDiscovery(
-                posts = posts.itemSnapshotList.items,
+                state = communitiesState,
+                onRetry = onRetryCommunities,
+                onCommunitySelected = onCommunitySelected,
                 modifier = Modifier.weight(1f),
             )
             posts.itemCount == 0 -> EmptyState(
@@ -587,18 +602,26 @@ private fun LemmyExploreThumbnail(post: LemmyPostUiModel) {
 
 @Composable
 private fun LemmyCommunitiesDiscovery(
-    posts: List<LemmyPostUiModel>,
+    state: LemmyCommunitiesUiState,
+    onRetry: () -> Unit,
+    onCommunitySelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val communities = remember(posts) {
-        posts
-            .distinctBy { it.community }
-            .sortedBy { it.community.lowercase() }
+    val communities = state.communities
+    when {
+        state.isLoading -> {
+            AppLoading(message = "Community listesi yükleniyor...", modifier = modifier)
+            return
+        }
+        state.errorMessage != null -> {
+            AppErrorState(message = state.errorMessage, onRetry = onRetry, modifier = modifier)
+            return
+        }
     }
     if (communities.isEmpty()) {
         EmptyState(
             title = "Community bulunamadı",
-            message = "All akışından community listesi oluşunca burada görünür.",
+            message = "Sunucu şu an popular community döndürmedi.",
             modifier = modifier,
         )
         return
@@ -608,17 +631,73 @@ private fun LemmyCommunitiesDiscovery(
         contentPadding = PaddingValues(AppSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
     ) {
+        item(contentType = "lemmy-community-search-placeholder") {
+            OutlinedTextField(
+                value = "",
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false,
+                singleLine = true,
+                leadingIcon = {
+                    Icon(imageVector = Icons.Outlined.Search, contentDescription = null)
+                },
+                placeholder = { Text("Community ara") },
+            )
+        }
         items(
             items = communities,
-            key = { it.community },
+            key = { it.id.ifBlank { it.name } },
             contentType = { "lemmy-community-discovery" },
-        ) { post ->
-            AssistChip(
-                onClick = {},
-                label = { Text("c/${post.community}") },
+        ) { community ->
+            LemmyCommunityDiscoveryRow(
+                community = community,
+                onClick = { onCommunitySelected(community.name) },
             )
         }
     }
+}
+
+@Composable
+private fun LemmyCommunityDiscoveryRow(
+    community: LemmyCommunityUiModel,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = AppSpacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = community.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "c/${community.name} · ${community.subscribers.compactMetric()} abone",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (community.description.isNotBlank()) {
+                Text(
+                    text = community.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        AssistChip(onClick = onClick, label = { Text("Aç") })
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
 }
 
 @Composable

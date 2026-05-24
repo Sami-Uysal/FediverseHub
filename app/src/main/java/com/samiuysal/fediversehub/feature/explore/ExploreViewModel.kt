@@ -10,8 +10,10 @@ import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
+import com.samiuysal.fediversehub.feature.lemmy.LemmyCommunityUiModel
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPostPage
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
@@ -61,6 +63,9 @@ class ExploreViewModel @Inject constructor(
     val lemmyTab: StateFlow<LemmyExploreTab> = _lemmyTab.asStateFlow()
     private val _lemmySort = MutableStateFlow(LemmySortType.HOT)
     val lemmySort: StateFlow<LemmySortType> = _lemmySort.asStateFlow()
+    private val _lemmyCommunitiesState = MutableStateFlow(LemmyCommunitiesUiState())
+    val lemmyCommunitiesState: StateFlow<LemmyCommunitiesUiState> = _lemmyCommunitiesState.asStateFlow()
+    private var currentLemmyAccount: Account? = null
 
     private val pixelfedAccount: Flow<Account?> =
         combine(accounts, selectedAccountId, selectedPlatform) { accounts, selectedId, platform ->
@@ -138,6 +143,12 @@ class ExploreViewModel @Inject constructor(
         } else {
             currentMastodonAccount = null
         }
+        currentLemmyAccount = account?.takeIf {
+            it.platform == PlatformType.LEMMY && !it.accessToken.isNullOrBlank()
+        }
+        if (_lemmyTab.value == LemmyExploreTab.COMMUNITIES) {
+            loadLemmyCommunities(currentLemmyAccount)
+        }
     }
 
     fun selectMastodonTab(tab: MastodonExploreTab) {
@@ -147,10 +158,20 @@ class ExploreViewModel @Inject constructor(
 
     fun selectLemmyTab(tab: LemmyExploreTab) {
         _lemmyTab.value = tab
+        if (tab == LemmyExploreTab.COMMUNITIES) {
+            loadLemmyCommunities(currentLemmyAccount)
+        }
     }
 
     fun selectLemmySort(sort: LemmySortType) {
         _lemmySort.value = sort
+        if (_lemmyTab.value == LemmyExploreTab.COMMUNITIES) {
+            loadLemmyCommunities(currentLemmyAccount)
+        }
+    }
+
+    fun refreshLemmyCommunities() {
+        loadLemmyCommunities(currentLemmyAccount)
     }
 
     fun refreshMastodon(account: Account?) {
@@ -244,6 +265,37 @@ class ExploreViewModel @Inject constructor(
                 loadingTab = null,
                 errorMessage = result.error.userMessage(),
             )
+        }
+    }
+
+    private fun loadLemmyCommunities(account: Account?) {
+        if (account == null) {
+            _lemmyCommunitiesState.value = LemmyCommunitiesUiState()
+            return
+        }
+        viewModelScope.launch {
+            _lemmyCommunitiesState.value = LemmyCommunitiesUiState(isLoading = true)
+            when (
+                val result = withContext(Dispatchers.IO) {
+                    lemmyRepository.getCommunities(
+                        account = account,
+                        page = LemmyPostPage(
+                            sort = _lemmySort.value,
+                            feedType = LemmyFeedType.ALL,
+                        ),
+                    )
+                }
+            ) {
+                is AppResult.Success -> {
+                    val communities: List<LemmyCommunityUiModel> = withContext(Dispatchers.Default) {
+                        result.data.map(LemmyPostMapper::communityToUi)
+                    }
+                    _lemmyCommunitiesState.value = LemmyCommunitiesUiState(communities = communities)
+                }
+                is AppResult.Failure -> {
+                    _lemmyCommunitiesState.value = LemmyCommunitiesUiState(errorMessage = result.error.userMessage())
+                }
+            }
         }
     }
 }

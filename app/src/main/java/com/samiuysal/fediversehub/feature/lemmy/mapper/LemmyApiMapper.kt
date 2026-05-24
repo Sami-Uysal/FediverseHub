@@ -2,8 +2,10 @@ package com.samiuysal.fediversehub.feature.lemmy.mapper
 
 import androidx.core.text.HtmlCompat
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommentViewDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunityViewDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostViewDto
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyComment
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyCommunity
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
@@ -13,6 +15,7 @@ object LemmyApiMapper {
         LemmyPost(
             id = view.post.id.toString(),
             title = view.post.name,
+            communityId = view.community.id?.toString(),
             communityName = view.community.name,
             communityActorId = view.community.actorId,
             domain = view.post.url?.hostLabel() ?: "self",
@@ -24,6 +27,8 @@ object LemmyApiMapper {
             comments = emptyList(),
             url = view.post.url,
             thumbnailUrl = view.post.thumbnailUrl,
+            myVote = view.myVote,
+            saved = view.saved,
         )
 
     fun commentViewToDomain(view: LemmyCommentViewDto): LemmyComment =
@@ -35,6 +40,22 @@ object LemmyApiMapper {
             depth = view.comment.path.depth(),
             isCollapsed = view.comment.deleted || view.comment.removed,
             score = view.counts.score,
+            myVote = view.myVote,
+        )
+
+    fun communityViewToDomain(view: LemmyCommunityViewDto): LemmyCommunity =
+        LemmyCommunity(
+            id = view.community.id?.toString().orEmpty(),
+            name = view.community.name,
+            title = view.community.title?.takeIf(String::isNotBlank) ?: view.community.name,
+            actorId = view.community.actorId,
+            description = htmlToPlainText(view.community.description.orEmpty()),
+            iconUrl = view.community.iconUrl,
+            bannerUrl = view.community.bannerUrl,
+            subscribers = view.counts.subscribers,
+            posts = view.counts.posts,
+            comments = view.counts.comments,
+            subscribed = view.subscribed.equals("Subscribed", ignoreCase = true),
         )
 
     private fun String?.depth(): Int {

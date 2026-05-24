@@ -31,11 +31,55 @@ data class LemmyCommentsResponseDto(
 )
 
 @Serializable
+data class LemmyCommunitiesResponseDto(
+    val communities: List<LemmyCommunityViewDto> = emptyList(),
+)
+
+@Serializable
+data class LemmyCommunityResponseDto(
+    @SerialName("community_view") val communityView: LemmyCommunityViewDto,
+)
+
+@Serializable
+data class LemmyPostActionRequestDto(
+    @SerialName("post_id") val postId: Int,
+    val score: Int? = null,
+    val save: Boolean? = null,
+    val auth: String? = null,
+)
+
+@Serializable
+data class LemmyPostActionResponseDto(
+    @SerialName("post_view") val postView: LemmyPostViewDto,
+)
+
+@Serializable
+data class LemmyCommentActionRequestDto(
+    @SerialName("comment_id") val commentId: Int,
+    val score: Int,
+    val auth: String? = null,
+)
+
+@Serializable
+data class LemmyCommentActionResponseDto(
+    @SerialName("comment_view") val commentView: LemmyCommentViewDto,
+)
+
+@Serializable
+data class LemmyCommunityFollowRequestDto(
+    @SerialName("community_id") val communityId: Int,
+    val follow: Boolean,
+    val auth: String? = null,
+)
+
+@Serializable
 data class LemmyPostViewDto(
     val post: LemmyPostDto,
     val creator: LemmyPersonDto,
     val community: LemmyCommunityDto,
     val counts: LemmyPostAggregatesDto,
+    @SerialName("my_vote") val myVote: Int? = null,
+    val saved: Boolean = false,
 )
 
 @Serializable
@@ -62,6 +106,9 @@ data class LemmyCommunityDto(
     val name: String,
     @SerialName("title") val title: String? = null,
     @SerialName("actor_id") val actorId: String? = null,
+    val description: String? = null,
+    @SerialName("icon") val iconUrl: String? = null,
+    @SerialName("banner") val bannerUrl: String? = null,
 )
 
 @Serializable
@@ -75,6 +122,7 @@ data class LemmyCommentViewDto(
     val comment: LemmyCommentDto,
     val creator: LemmyPersonDto,
     val counts: LemmyCommentAggregatesDto,
+    @SerialName("my_vote") val myVote: Int? = null,
 )
 
 @Serializable
@@ -91,4 +139,18 @@ data class LemmyCommentDto(
 @Serializable
 data class LemmyCommentAggregatesDto(
     val score: Int = 0,
+)
+
+@Serializable
+data class LemmyCommunityViewDto(
+    val community: LemmyCommunityDto,
+    val counts: LemmyCommunityAggregatesDto,
+    val subscribed: String? = null,
+)
+
+@Serializable
+data class LemmyCommunityAggregatesDto(
+    val subscribers: Int = 0,
+    val posts: Int = 0,
+    val comments: Int = 0,
 )

@@ -14,6 +14,7 @@ class LemmyPostPagingSource(
     private val accessToken: String?,
     private val sort: LemmySortType,
     private val feedType: LemmyFeedType,
+    private val communityName: String? = null,
     private val lemmyApi: LemmyApi,
 ) : PagingSource<Int, LemmyPost>() {
     override fun getRefreshKey(state: PagingState<Int, LemmyPost>): Int? =
@@ -33,6 +34,7 @@ class LemmyPostPagingSource(
                 limit = limit,
                 sort = sort.apiValue,
                 feedType = feedType.apiValue,
+                communityName = communityName,
             )
             val posts = response.posts.map(LemmyApiMapper::postViewToDomain)
             LoadResult.Page(

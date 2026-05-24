@@ -1,14 +1,17 @@
 package com.samiuysal.fediversehub.feature.lemmy.mapper
 
 import com.samiuysal.fediversehub.feature.lemmy.CommentUiModel
+import com.samiuysal.fediversehub.feature.lemmy.LemmyCommunityUiModel
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyComment
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyCommunity
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 
 object LemmyPostMapper {
     fun domainToUi(domain: LemmyPost): LemmyPostUiModel = LemmyPostUiModel(
         id = domain.id,
         title = domain.title,
+        communityId = domain.communityId,
         community = domain.communityName,
         domain = domain.domain,
         author = "u/${domain.authorName}",
@@ -19,6 +22,9 @@ object LemmyPostMapper {
         nestedComments = domain.comments.map(::commentToUi),
         url = domain.url,
         thumbnailUrl = domain.thumbnailUrl,
+        isUpvoted = domain.myVote == 1,
+        isDownvoted = domain.myVote == -1,
+        isSaved = domain.saved,
     )
 
     fun commentToUi(comment: LemmyComment): CommentUiModel = CommentUiModel(
@@ -29,5 +35,21 @@ object LemmyPostMapper {
         depth = comment.depth,
         isCollapsed = comment.isCollapsed,
         score = comment.score,
+        isUpvoted = comment.myVote == 1,
+        isDownvoted = comment.myVote == -1,
+    )
+
+    fun communityToUi(community: LemmyCommunity): LemmyCommunityUiModel = LemmyCommunityUiModel(
+        id = community.id,
+        name = community.name,
+        title = community.title,
+        actorId = community.actorId,
+        description = community.description,
+        iconUrl = community.iconUrl,
+        bannerUrl = community.bannerUrl,
+        subscribers = community.subscribers,
+        posts = community.posts,
+        comments = community.comments,
+        isSubscribed = community.subscribed,
     )
 }

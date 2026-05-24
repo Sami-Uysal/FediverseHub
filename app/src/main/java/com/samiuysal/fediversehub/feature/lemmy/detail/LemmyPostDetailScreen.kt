@@ -19,10 +19,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ModeComment
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +57,8 @@ import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
 import com.samiuysal.fediversehub.feature.home.MockFediverseData
 import com.samiuysal.fediversehub.feature.lemmy.CommentUiModel
+import com.samiuysal.fediversehub.feature.lemmy.LemmyCommentActionType
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostActionType
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 
 @Composable
@@ -61,6 +68,9 @@ fun LemmyPostDetailScreen(
     onRetry: () -> Unit,
     onRetryComments: () -> Unit,
     onToggleComment: (String) -> Unit,
+    onPostAction: (LemmyPostActionType) -> Unit,
+    onCommentAction: (CommentUiModel, LemmyCommentActionType) -> Unit,
+    onCommunityClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -79,6 +89,9 @@ fun LemmyPostDetailScreen(
                 state = uiState,
                 onRetryComments = onRetryComments,
                 onToggleComment = onToggleComment,
+                onPostAction = onPostAction,
+                onCommentAction = onCommentAction,
+                onCommunityClick = onCommunityClick,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -128,6 +141,9 @@ private fun LemmyPostDetailContent(
     state: LemmyPostDetailUiState.Success,
     onRetryComments: () -> Unit,
     onToggleComment: (String) -> Unit,
+    onPostAction: (LemmyPostActionType) -> Unit,
+    onCommentAction: (CommentUiModel, LemmyCommentActionType) -> Unit,
+    onCommunityClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val visibleComments = remember(state.comments, state.collapsedCommentIds) {
@@ -139,7 +155,11 @@ private fun LemmyPostDetailContent(
         contentPadding = PaddingValues(bottom = AppSpacing.xl),
     ) {
         item(key = "lemmy-detail-post", contentType = "lemmy-detail-post") {
-            LemmyDetailPost(post = state.post)
+            LemmyDetailPost(
+                post = state.post,
+                onPostAction = onPostAction,
+                onCommunityClick = onCommunityClick,
+            )
         }
 
         item(key = "lemmy-comments-header", contentType = "lemmy-comments-header") {
@@ -180,6 +200,7 @@ private fun LemmyPostDetailContent(
                 LemmyCommentRow(
                     item = item,
                     onToggleComment = onToggleComment,
+                    onCommentAction = onCommentAction,
                 )
             }
         }
@@ -187,7 +208,11 @@ private fun LemmyPostDetailContent(
 }
 
 @Composable
-private fun LemmyDetailPost(post: LemmyPostUiModel) {
+private fun LemmyDetailPost(
+    post: LemmyPostUiModel,
+    onPostAction: (LemmyPostActionType) -> Unit,
+    onCommunityClick: (String) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -200,6 +225,7 @@ private fun LemmyDetailPost(post: LemmyPostUiModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
+                modifier = Modifier.clickable { onCommunityClick(post.community) },
                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                 contentColor = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(AppRadius.full),
@@ -250,10 +276,22 @@ private fun LemmyDetailPost(post: LemmyPostUiModel) {
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            VoteButton(
+                isLoading = post.loadingAction == LemmyPostActionType.UPVOTE,
+                icon = Icons.Outlined.KeyboardArrowUp,
+                isHighlighted = post.isUpvoted,
+                onClick = { onPostAction(LemmyPostActionType.UPVOTE) },
+            )
             Text(
                 text = "${post.score.compactMetric()} puan",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
+            )
+            VoteButton(
+                isLoading = post.loadingAction == LemmyPostActionType.DOWNVOTE,
+                icon = Icons.Outlined.KeyboardArrowDown,
+                isHighlighted = post.isDownvoted,
+                onClick = { onPostAction(LemmyPostActionType.DOWNVOTE) },
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -268,6 +306,30 @@ private fun LemmyDetailPost(post: LemmyPostUiModel) {
                     text = "${post.comments.compactMetric()} yorum",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Row(
+                modifier = Modifier.clickable(
+                    enabled = post.loadingAction != LemmyPostActionType.SAVE,
+                    onClick = { onPostAction(LemmyPostActionType.SAVE) },
+                ),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (post.loadingAction == LemmyPostActionType.SAVE) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        imageVector = if (post.isSaved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = null,
+                        tint = if (post.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = if (post.isSaved) "Saved" else "Save",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (post.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -354,6 +416,7 @@ private fun CommentsHeader(count: Int) {
 private fun LemmyCommentRow(
     item: LemmyVisibleComment,
     onToggleComment: (String) -> Unit,
+    onCommentAction: (CommentUiModel, LemmyCommentActionType) -> Unit,
 ) {
     val comment = item.comment
     Surface(
@@ -403,6 +466,18 @@ private fun LemmyCommentRow(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        VoteButton(
+                            isLoading = comment.loadingAction == LemmyCommentActionType.UPVOTE,
+                            icon = Icons.Outlined.KeyboardArrowUp,
+                            isHighlighted = comment.isUpvoted,
+                            onClick = { onCommentAction(comment, LemmyCommentActionType.UPVOTE) },
+                        )
+                        VoteButton(
+                            isLoading = comment.loadingAction == LemmyCommentActionType.DOWNVOTE,
+                            icon = Icons.Outlined.KeyboardArrowDown,
+                            isHighlighted = comment.isDownvoted,
+                            onClick = { onCommentAction(comment, LemmyCommentActionType.DOWNVOTE) },
+                        )
                         if (item.hasChildren) {
                             Icon(
                                 imageVector = if (item.isCollapsed) {
@@ -430,6 +505,32 @@ private fun LemmyCommentRow(
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f))
+        }
+    }
+}
+
+@Composable
+private fun VoteButton(
+    isLoading: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isHighlighted: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .clip(RoundedCornerShape(AppRadius.full))
+            .clickable(enabled = !isLoading, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(15.dp), strokeWidth = 2.dp)
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -486,6 +587,9 @@ fun LemmyPostDetailScreenPreview() {
             onRetry = {},
             onRetryComments = {},
             onToggleComment = {},
+            onPostAction = {},
+            onCommentAction = { _, _ -> },
+            onCommunityClick = {},
         )
     }
 }

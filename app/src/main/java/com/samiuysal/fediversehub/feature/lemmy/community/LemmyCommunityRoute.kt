@@ -1,4 +1,4 @@
-package com.samiuysal.fediversehub.feature.lemmy.detail
+package com.samiuysal.fediversehub.feature.lemmy.community
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -8,34 +8,37 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
 
 @Composable
-fun LemmyPostDetailRoute(
+fun LemmyCommunityRoute(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
-    onCommunitySelected: (String) -> Unit,
+    onPostSelected: (String) -> Unit,
     onUnauthorized: () -> Unit,
-    viewModel: LemmyPostDetailViewModel = hiltViewModel(),
+    viewModel: LemmyCommunityViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sort by viewModel.sort.collectAsStateWithLifecycle()
+    val posts = viewModel.posts.collectAsLazyPagingItems()
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                LemmyPostDetailEffect.NavigateToLogin -> onUnauthorized()
+                LemmyCommunityEffect.NavigateToLogin -> onUnauthorized()
             }
         }
     }
 
-    LemmyPostDetailScreen(
+    LemmyCommunityScreen(
         uiState = uiState,
+        posts = posts,
+        selectedSort = sort,
         onBack = onBack,
         onRetry = viewModel::retry,
-        onRetryComments = viewModel::retryComments,
-        onToggleComment = viewModel::toggleComment,
-        onPostAction = viewModel::onPostAction,
-        onCommentAction = viewModel::onCommentAction,
-        onCommunityClick = onCommunitySelected,
+        onSortSelected = viewModel::selectSort,
+        onFollowClick = viewModel::toggleFollow,
+        onPostSelected = onPostSelected,
         modifier = Modifier.padding(contentPadding),
     )
 }

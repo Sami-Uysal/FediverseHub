@@ -8,6 +8,10 @@ import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
+import com.samiuysal.fediversehub.feature.lemmy.CommentUiModel
+import com.samiuysal.fediversehub.feature.lemmy.LemmyCommentActionType
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostActionType
+import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
 import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
 import com.samiuysal.fediversehub.navigation.AppDestination
@@ -62,6 +66,88 @@ class LemmyPostDetailViewModel @Inject constructor(
                 success.collapsedCommentIds + commentId
             }
             success.copy(collapsedCommentIds = nextCollapsedIds)
+        }
+    }
+
+    fun onPostAction(action: LemmyPostActionType) {
+        val current = _uiState.value as? LemmyPostDetailUiState.Success ?: return
+        val before = current.post
+        val optimistic = before.optimistic(action).copy(loadingAction = action)
+        _uiState.value = current.copy(post = optimistic)
+        viewModelScope.launch {
+            val account = lemmyAccount()
+            val result = when (action) {
+                LemmyPostActionType.UPVOTE -> lemmyRepository.votePost(
+                    account = account,
+                    postId = before.id,
+                    score = if (before.isUpvoted) 0 else 1,
+                )
+                LemmyPostActionType.DOWNVOTE -> lemmyRepository.votePost(
+                    account = account,
+                    postId = before.id,
+                    score = if (before.isDownvoted) 0 else -1,
+                )
+                LemmyPostActionType.SAVE -> lemmyRepository.savePost(
+                    account = account,
+                    postId = before.id,
+                    saved = !before.isSaved,
+                )
+            }
+            when (result) {
+                is AppResult.Success -> {
+                    _uiState.update { state ->
+                        (state as? LemmyPostDetailUiState.Success)
+                            ?.copy(post = LemmyPostMapper.domainToUi(result.data).copy(loadingAction = null))
+                            ?: state
+                    }
+                }
+                is AppResult.Failure -> {
+                    _uiState.update { state ->
+                        (state as? LemmyPostDetailUiState.Success)
+                            ?.copy(post = before.copy(loadingAction = null))
+                            ?: state
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(LemmyPostDetailEffect.NavigateToLogin)
+                    }
+                }
+            }
+        }
+    }
+
+    fun onCommentAction(comment: CommentUiModel, action: LemmyCommentActionType) {
+        val current = _uiState.value as? LemmyPostDetailUiState.Success ?: return
+        val before = current.comments.firstOrNull { it.id == comment.id } ?: comment
+        val optimistic = before.optimistic(action).copy(loadingAction = action)
+        _uiState.value = current.replaceComment(optimistic)
+        viewModelScope.launch {
+            val result = lemmyRepository.voteComment(
+                account = lemmyAccount(),
+                commentId = before.id,
+                score = when (action) {
+                    LemmyCommentActionType.UPVOTE -> if (before.isUpvoted) 0 else 1
+                    LemmyCommentActionType.DOWNVOTE -> if (before.isDownvoted) 0 else -1
+                },
+            )
+            when (result) {
+                is AppResult.Success -> {
+                    _uiState.update { state ->
+                        (state as? LemmyPostDetailUiState.Success)
+                            ?.replaceComment(LemmyPostMapper.commentToUi(result.data).copy(loadingAction = null))
+                            ?: state
+                    }
+                }
+                is AppResult.Failure -> {
+                    _uiState.update { state ->
+                        (state as? LemmyPostDetailUiState.Success)
+                            ?.replaceComment(before.copy(loadingAction = null))
+                            ?: state
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(LemmyPostDetailEffect.NavigateToLogin)
+                    }
+                }
+            }
         }
     }
 
@@ -152,3 +238,65 @@ private fun AppError.lemmyMessage(): String = when (this) {
     is AppError.Server -> "Sunucu hatası $code. Biraz sonra tekrar dene."
     is AppError.Unknown -> message ?: "Lemmy içeriği yüklenemedi."
 }
+
+private fun LemmyPostDetailUiState.Success.replaceComment(
+    comment: CommentUiModel,
+): LemmyPostDetailUiState.Success =
+    copy(comments = comments.map { if (it.id == comment.id) comment else it })
+
+private fun LemmyPostUiModel.optimistic(action: LemmyPostActionType): LemmyPostUiModel =
+    when (action) {
+        LemmyPostActionType.UPVOTE -> {
+            val nextUpvoted = !isUpvoted
+            copy(
+                isUpvoted = nextUpvoted,
+                isDownvoted = false,
+                score = score + when {
+                    nextUpvoted && isDownvoted -> 2
+                    nextUpvoted -> 1
+                    else -> -1
+                },
+            )
+        }
+        LemmyPostActionType.DOWNVOTE -> {
+            val nextDownvoted = !isDownvoted
+            copy(
+                isDownvoted = nextDownvoted,
+                isUpvoted = false,
+                score = score + when {
+                    nextDownvoted && isUpvoted -> -2
+                    nextDownvoted -> -1
+                    else -> 1
+                },
+            )
+        }
+        LemmyPostActionType.SAVE -> copy(isSaved = !isSaved)
+    }
+
+private fun CommentUiModel.optimistic(action: LemmyCommentActionType): CommentUiModel =
+    when (action) {
+        LemmyCommentActionType.UPVOTE -> {
+            val nextUpvoted = !isUpvoted
+            copy(
+                isUpvoted = nextUpvoted,
+                isDownvoted = false,
+                score = score + when {
+                    nextUpvoted && isDownvoted -> 2
+                    nextUpvoted -> 1
+                    else -> -1
+                },
+            )
+        }
+        LemmyCommentActionType.DOWNVOTE -> {
+            val nextDownvoted = !isDownvoted
+            copy(
+                isDownvoted = nextDownvoted,
+                isUpvoted = false,
+                score = score + when {
+                    nextDownvoted && isUpvoted -> -2
+                    nextDownvoted -> -1
+                    else -> 1
+                },
+            )
+        }
+    }

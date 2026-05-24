@@ -5,6 +5,8 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyComment
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyCommunity
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPostPage
@@ -18,13 +20,20 @@ class MockLemmyRepository @Inject constructor() : LemmyRepository {
         account: Account,
         sort: LemmySortType,
         feedType: LemmyFeedType,
+        communityName: String?,
     ): Flow<PagingData<LemmyPost>> = Pager(
         config = PagingConfig(
             pageSize = LemmyPostPage.DEFAULT_LIMIT,
             initialLoadSize = LemmyPostPage.DEFAULT_LIMIT,
             enablePlaceholders = false,
         ),
-        pagingSourceFactory = { MockLemmyPagingSource(MockLemmyData.posts.sortedFor(sort)) },
+        pagingSourceFactory = {
+            MockLemmyPagingSource(
+                MockLemmyData.posts
+                    .filter { communityName == null || it.communityName == communityName }
+                    .sortedFor(sort),
+            )
+        },
     ).flow
 
     override suspend fun getPosts(
@@ -39,8 +48,36 @@ class MockLemmyRepository @Inject constructor() : LemmyRepository {
     override suspend fun getComments(
         account: Account,
         postId: String,
-    ): AppResult<List<com.samiuysal.fediversehub.feature.lemmy.domain.LemmyComment>> =
+    ): AppResult<List<LemmyComment>> =
         AppResult.Success(MockLemmyData.posts.firstOrNull { it.id == postId }?.comments.orEmpty())
+
+    override suspend fun votePost(account: Account, postId: String, score: Int): AppResult<LemmyPost> =
+        getPost(account, postId)
+
+    override suspend fun savePost(account: Account, postId: String, saved: Boolean): AppResult<LemmyPost> =
+        getPost(account, postId)
+
+    override suspend fun voteComment(account: Account, commentId: String, score: Int): AppResult<LemmyComment> =
+        AppResult.Success(
+            MockLemmyData.posts.flatMap { it.comments }.firstOrNull { it.id == commentId }
+                ?: MockLemmyData.posts.first().comments.first(),
+        )
+
+    override suspend fun getCommunity(account: Account, communityName: String): AppResult<LemmyCommunity> =
+        AppResult.Success(MockLemmyData.communityFor(communityName))
+
+    override suspend fun getCommunities(
+        account: Account,
+        page: LemmyPostPage,
+    ): AppResult<List<LemmyCommunity>> =
+        AppResult.Success(MockLemmyData.posts.map { MockLemmyData.communityFor(it.communityName) }.distinctBy { it.name })
+
+    override suspend fun followCommunity(
+        account: Account,
+        communityId: String,
+        follow: Boolean,
+    ): AppResult<LemmyCommunity> =
+        AppResult.Success(MockLemmyData.communityFor("fediverse").copy(subscribed = follow))
 
     private fun List<LemmyPost>.sortedFor(sort: LemmySortType): List<LemmyPost> = when (sort) {
         LemmySortType.HOT -> sortedByDescending { it.score + it.commentCount }

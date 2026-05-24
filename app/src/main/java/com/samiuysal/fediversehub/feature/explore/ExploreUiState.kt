@@ -1,6 +1,7 @@
 package com.samiuysal.fediversehub.feature.explore
 
 import androidx.compose.runtime.Immutable
+import com.samiuysal.fediversehub.feature.lemmy.LemmyCommunityUiModel
 import com.samiuysal.fediversehub.feature.mastodon.MastodonPostUiModel
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonHashtag
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTrendLink
@@ -29,3 +30,10 @@ data class MastodonExploreUiState(
     val isSelectedTabLoading: Boolean
         get() = loadingTab == selectedTab
 }
+
+@Immutable
+data class LemmyCommunitiesUiState(
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val communities: List<LemmyCommunityUiModel> = emptyList(),
+)

@@ -3,6 +3,7 @@ package com.samiuysal.fediversehub.feature.lemmy.data.repository
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
@@ -10,6 +11,7 @@ import com.samiuysal.fediversehub.feature.lemmy.data.remote.LemmyApi
 import com.samiuysal.fediversehub.feature.lemmy.data.remote.LemmyPostPagingSource
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyComment
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyCommunity
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPostPage
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
@@ -26,6 +28,7 @@ class LemmyRepositoryImpl @Inject constructor(
         account: Account,
         sort: LemmySortType,
         feedType: LemmyFeedType,
+        communityName: String?,
     ): Flow<PagingData<LemmyPost>> =
         Pager(
             config = PagingConfig(
@@ -40,6 +43,7 @@ class LemmyRepositoryImpl @Inject constructor(
                     accessToken = account.accessToken,
                     sort = sort,
                     feedType = feedType,
+                    communityName = communityName,
                     lemmyApi = lemmyApi,
                 )
             },
@@ -58,6 +62,7 @@ class LemmyRepositoryImpl @Inject constructor(
                     limit = page.limit,
                     sort = page.sort.apiValue,
                     feedType = page.feedType.apiValue,
+                    communityName = null,
                 ).posts.map(LemmyApiMapper::postViewToDomain),
             )
         } catch (throwable: Throwable) {
@@ -90,6 +95,121 @@ class LemmyRepositoryImpl @Inject constructor(
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }
+
+    override suspend fun votePost(
+        account: Account,
+        postId: String,
+        score: Int,
+    ): AppResult<LemmyPost> {
+        val token = account.accessToken ?: return AppResult.Failure(AppError.Unauthorized)
+        return try {
+            AppResult.Success(
+                lemmyApi.votePost(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = token,
+                    postId = postId.toInt(),
+                    score = score.coerceIn(-1, 1),
+                ).postView.let(LemmyApiMapper::postViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun savePost(
+        account: Account,
+        postId: String,
+        saved: Boolean,
+    ): AppResult<LemmyPost> {
+        val token = account.accessToken ?: return AppResult.Failure(AppError.Unauthorized)
+        return try {
+            AppResult.Success(
+                lemmyApi.savePost(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = token,
+                    postId = postId.toInt(),
+                    saved = saved,
+                ).postView.let(LemmyApiMapper::postViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun voteComment(
+        account: Account,
+        commentId: String,
+        score: Int,
+    ): AppResult<LemmyComment> {
+        val token = account.accessToken ?: return AppResult.Failure(AppError.Unauthorized)
+        return try {
+            AppResult.Success(
+                lemmyApi.voteComment(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = token,
+                    commentId = commentId.toInt(),
+                    score = score.coerceIn(-1, 1),
+                ).commentView.let(LemmyApiMapper::commentViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getCommunity(
+        account: Account,
+        communityName: String,
+    ): AppResult<LemmyCommunity> =
+        try {
+            AppResult.Success(
+                lemmyApi.getCommunity(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = account.accessToken,
+                    communityName = communityName,
+                ).communityView.let(LemmyApiMapper::communityViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+
+    override suspend fun getCommunities(
+        account: Account,
+        page: LemmyPostPage,
+    ): AppResult<List<LemmyCommunity>> =
+        try {
+            AppResult.Success(
+                lemmyApi.getCommunities(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = account.accessToken,
+                    page = page.page,
+                    limit = page.limit,
+                    sort = page.sort.apiValue,
+                    feedType = page.feedType.apiValue,
+                ).communities.map(LemmyApiMapper::communityViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+
+    override suspend fun followCommunity(
+        account: Account,
+        communityId: String,
+        follow: Boolean,
+    ): AppResult<LemmyCommunity> {
+        val token = account.accessToken ?: return AppResult.Failure(AppError.Unauthorized)
+        return try {
+            AppResult.Success(
+                lemmyApi.followCommunity(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = token,
+                    communityId = communityId.toInt(),
+                    follow = follow,
+                ).communityView.let(LemmyApiMapper::communityViewToDomain),
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
 
     private companion object {
         const val COMMENTS_LIMIT = 200

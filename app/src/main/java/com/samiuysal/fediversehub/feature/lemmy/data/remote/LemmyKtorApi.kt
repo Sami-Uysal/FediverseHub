@@ -3,6 +3,13 @@ package com.samiuysal.fediversehub.feature.lemmy.data.remote
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyLoginRequestDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyLoginResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommentsResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommentActionRequestDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommentActionResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunitiesResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunityFollowRequestDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCommunityResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionRequestDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostsResponseDto
 import io.ktor.client.HttpClient
@@ -38,6 +45,7 @@ class LemmyKtorApi @Inject constructor(
         limit: Int,
         sort: String,
         feedType: String,
+        communityName: String?,
     ): LemmyPostsResponseDto {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v3/post/list") {
@@ -46,6 +54,7 @@ class LemmyKtorApi @Inject constructor(
             parameter("sort", sort)
             parameter("page", page)
             parameter("limit", limit)
+            communityName?.takeIf(String::isNotBlank)?.let { parameter("community_name", it) }
         }.body()
     }
 
@@ -58,6 +67,98 @@ class LemmyKtorApi @Inject constructor(
         return httpClient.get("$baseUrl/api/v3/post") {
             withAuth(accessToken)
             parameter("id", postId)
+        }.body()
+    }
+
+    override suspend fun votePost(
+        instanceUrl: String,
+        accessToken: String,
+        postId: Int,
+        score: Int,
+    ): LemmyPostActionResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v3/post/like") {
+            bearerAuth(accessToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            setBody(LemmyPostActionRequestDto(postId = postId, score = score, auth = accessToken))
+        }.body()
+    }
+
+    override suspend fun savePost(
+        instanceUrl: String,
+        accessToken: String,
+        postId: Int,
+        saved: Boolean,
+    ): LemmyPostActionResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v3/post/save") {
+            bearerAuth(accessToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            setBody(LemmyPostActionRequestDto(postId = postId, save = saved, auth = accessToken))
+        }.body()
+    }
+
+    override suspend fun voteComment(
+        instanceUrl: String,
+        accessToken: String,
+        commentId: Int,
+        score: Int,
+    ): LemmyCommentActionResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v3/comment/like") {
+            bearerAuth(accessToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            setBody(LemmyCommentActionRequestDto(commentId = commentId, score = score, auth = accessToken))
+        }.body()
+    }
+
+    override suspend fun getCommunity(
+        instanceUrl: String,
+        accessToken: String?,
+        communityName: String,
+    ): LemmyCommunityResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/community") {
+            withAuth(accessToken)
+            parameter("name", communityName)
+        }.body()
+    }
+
+    override suspend fun getCommunities(
+        instanceUrl: String,
+        accessToken: String?,
+        page: Int,
+        limit: Int,
+        sort: String,
+        feedType: String,
+    ): LemmyCommunitiesResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/community/list") {
+            withAuth(accessToken)
+            parameter("type_", feedType)
+            parameter("sort", sort)
+            parameter("page", page)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun followCommunity(
+        instanceUrl: String,
+        accessToken: String,
+        communityId: Int,
+        follow: Boolean,
+    ): LemmyCommunityResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v3/community/follow") {
+            bearerAuth(accessToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json)
+            setBody(
+                LemmyCommunityFollowRequestDto(
+                    communityId = communityId,
+                    follow = follow,
+                    auth = accessToken,
+                ),
+            )
         }.body()
     }
 
