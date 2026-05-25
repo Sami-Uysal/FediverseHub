@@ -16,6 +16,21 @@ data class LemmyLoginResponseDto(
 )
 
 @Serializable
+data class LemmySiteResponseDto(
+    @SerialName("my_user") val myUser: LemmyMyUserDto? = null,
+)
+
+@Serializable
+data class LemmyMyUserDto(
+    @SerialName("local_user_view") val localUserView: LemmyLocalUserViewDto? = null,
+)
+
+@Serializable
+data class LemmyLocalUserViewDto(
+    val person: LemmyPersonDto? = null,
+)
+
+@Serializable
 data class LemmyPostsResponseDto(
     val posts: List<LemmyPostViewDto> = emptyList(),
 )
@@ -28,6 +43,23 @@ data class LemmyPostResponseDto(
 @Serializable
 data class LemmyCommentsResponseDto(
     val comments: List<LemmyCommentViewDto> = emptyList(),
+)
+
+@Serializable
+data class LemmySearchResponseDto(
+    val posts: List<LemmyPostViewDto> = emptyList(),
+    val communities: List<LemmyCommunityViewDto> = emptyList(),
+    val users: List<LemmyPersonViewDto> = emptyList(),
+)
+
+@Serializable
+data class LemmyRepliesResponseDto(
+    val replies: List<LemmyReplyViewDto> = emptyList(),
+)
+
+@Serializable
+data class LemmyMentionsResponseDto(
+    val mentions: List<LemmyMentionViewDto> = emptyList(),
 )
 
 @Serializable
@@ -100,6 +132,47 @@ data class LemmyCommunityFollowRequestDto(
 )
 
 @Serializable
+data class LemmyUserResponseDto(
+    @SerialName("person_view") val personView: LemmyPersonViewDto? = null,
+    val posts: List<LemmyPostViewDto> = emptyList(),
+    val comments: List<LemmyCommentViewDto> = emptyList(),
+)
+
+@Serializable
+data class LemmyReplyViewDto(
+    @SerialName("comment_reply") val commentReply: LemmyReplyMarkerDto,
+    val comment: LemmyCommentDto,
+    val creator: LemmyPersonDto,
+    val post: LemmyPostDto,
+    val community: LemmyCommunityDto,
+    val counts: LemmyCommentAggregatesDto = LemmyCommentAggregatesDto(),
+    @SerialName("my_vote") val myVote: Int? = null,
+)
+
+@Serializable
+data class LemmyMentionViewDto(
+    @SerialName("person_mention") val personMention: LemmyReplyMarkerDto,
+    val comment: LemmyCommentDto,
+    val creator: LemmyPersonDto,
+    val post: LemmyPostDto,
+    val community: LemmyCommunityDto,
+    val counts: LemmyCommentAggregatesDto = LemmyCommentAggregatesDto(),
+    @SerialName("my_vote") val myVote: Int? = null,
+)
+
+@Serializable
+data class LemmyReplyMarkerDto(
+    val id: Int,
+    val read: Boolean = false,
+)
+
+@Serializable
+data class LemmyPersonViewDto(
+    val person: LemmyPersonDto,
+    val counts: LemmyPersonAggregatesDto = LemmyPersonAggregatesDto(),
+)
+
+@Serializable
 data class LemmyPostViewDto(
     val post: LemmyPostDto,
     val creator: LemmyPersonDto,
@@ -125,6 +198,14 @@ data class LemmyPersonDto(
     val name: String,
     @SerialName("display_name") val displayName: String? = null,
     @SerialName("avatar") val avatarUrl: String? = null,
+    @SerialName("banner") val bannerUrl: String? = null,
+    val bio: String? = null,
+)
+
+@Serializable
+data class LemmyPersonAggregatesDto(
+    @SerialName("post_count") val postCount: Int = 0,
+    @SerialName("comment_count") val commentCount: Int = 0,
 )
 
 @Serializable

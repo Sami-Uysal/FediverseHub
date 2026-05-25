@@ -11,9 +11,16 @@ import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreateCommentRespo
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyCreatePostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostsResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmySiteResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmySearchResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyRepliesResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyMentionsResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyUserResponseDto
 
 interface LemmyApi {
     suspend fun login(instanceUrl: String, request: LemmyLoginRequestDto): LemmyLoginResponseDto
+
+    suspend fun getSite(instanceUrl: String, accessToken: String?): LemmySiteResponseDto
 
     suspend fun getPosts(
         instanceUrl: String,
@@ -37,6 +44,32 @@ interface LemmyApi {
         postId: Int,
         limit: Int,
     ): LemmyCommentsResponseDto
+
+    suspend fun search(
+        instanceUrl: String,
+        accessToken: String?,
+        query: String,
+        type: String,
+        page: Int,
+        limit: Int,
+        sort: String,
+    ): LemmySearchResponseDto
+
+    suspend fun getReplies(
+        instanceUrl: String,
+        accessToken: String,
+        unreadOnly: Boolean,
+        page: Int,
+        limit: Int,
+    ): LemmyRepliesResponseDto
+
+    suspend fun getMentions(
+        instanceUrl: String,
+        accessToken: String,
+        unreadOnly: Boolean,
+        page: Int,
+        limit: Int,
+    ): LemmyMentionsResponseDto
 
     suspend fun createComment(
         instanceUrl: String,
@@ -97,4 +130,14 @@ interface LemmyApi {
         communityId: Int,
         follow: Boolean,
     ): LemmyCommunityResponseDto
+
+    suspend fun getUser(
+        instanceUrl: String,
+        accessToken: String?,
+        username: String,
+        page: Int,
+        limit: Int,
+        sort: String,
+        savedOnly: Boolean = false,
+    ): LemmyUserResponseDto
 }

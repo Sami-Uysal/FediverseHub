@@ -16,6 +16,11 @@ import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionRequestD
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostActionResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostResponseDto
 import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyPostsResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmySearchResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyRepliesResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyMentionsResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmySiteResponseDto
+import com.samiuysal.fediversehub.feature.lemmy.data.dto.LemmyUserResponseDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
@@ -39,6 +44,16 @@ class LemmyKtorApi @Inject constructor(
         return httpClient.post("$baseUrl/api/v3/user/login") {
             header(HttpHeaders.ContentType, ContentType.Application.Json)
             setBody(request)
+        }.body()
+    }
+
+    override suspend fun getSite(
+        instanceUrl: String,
+        accessToken: String?,
+    ): LemmySiteResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/site") {
+            withAuth(accessToken)
         }.body()
     }
 
@@ -232,6 +247,82 @@ class LemmyKtorApi @Inject constructor(
             parameter("post_id", postId)
             parameter("limit", limit)
             parameter("max_depth", 8)
+        }.body()
+    }
+
+    override suspend fun search(
+        instanceUrl: String,
+        accessToken: String?,
+        query: String,
+        type: String,
+        page: Int,
+        limit: Int,
+        sort: String,
+    ): LemmySearchResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/search") {
+            withAuth(accessToken)
+            parameter("q", query)
+            parameter("type_", type)
+            parameter("sort", sort)
+            parameter("page", page)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun getReplies(
+        instanceUrl: String,
+        accessToken: String,
+        unreadOnly: Boolean,
+        page: Int,
+        limit: Int,
+    ): LemmyRepliesResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/user/replies") {
+            bearerAuth(accessToken)
+            parameter("auth", accessToken)
+            parameter("unread_only", unreadOnly)
+            parameter("sort", "New")
+            parameter("page", page)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun getMentions(
+        instanceUrl: String,
+        accessToken: String,
+        unreadOnly: Boolean,
+        page: Int,
+        limit: Int,
+    ): LemmyMentionsResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/user/mention") {
+            bearerAuth(accessToken)
+            parameter("auth", accessToken)
+            parameter("unread_only", unreadOnly)
+            parameter("sort", "New")
+            parameter("page", page)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun getUser(
+        instanceUrl: String,
+        accessToken: String?,
+        username: String,
+        page: Int,
+        limit: Int,
+        sort: String,
+        savedOnly: Boolean,
+    ): LemmyUserResponseDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v3/user") {
+            withAuth(accessToken)
+            parameter("username", username)
+            parameter("page", page)
+            parameter("limit", limit)
+            parameter("sort", sort)
+            parameter("saved_only", savedOnly)
         }.body()
     }
 

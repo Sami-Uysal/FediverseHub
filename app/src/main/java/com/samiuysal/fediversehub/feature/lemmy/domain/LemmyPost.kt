@@ -21,6 +21,8 @@ data class LemmyPost(
 
 data class LemmyComment(
     val id: String,
+    val postId: String,
+    val postTitle: String? = null,
     val parentId: String?,
     val authorName: String,
     val content: String,
@@ -42,6 +44,21 @@ data class LemmyCommunity(
     val posts: Int,
     val comments: Int,
     val subscribed: Boolean,
+)
+
+data class LemmyProfile(
+    val id: String,
+    val name: String,
+    val displayName: String,
+    val avatarUrl: String?,
+    val bannerUrl: String?,
+    val bio: String,
+    val postCount: Int,
+    val commentCount: Int,
+    val posts: List<LemmyPost>,
+    val comments: List<LemmyComment>,
+    val savedPosts: List<LemmyPost> = emptyList(),
+    val savedComments: List<LemmyComment> = emptyList(),
 )
 
 enum class LemmySortType {

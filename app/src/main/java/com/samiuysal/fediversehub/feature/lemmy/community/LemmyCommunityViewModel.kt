@@ -46,6 +46,7 @@ class LemmyCommunityViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val communityName: String = checkNotNull(savedStateHandle[AppDestination.COMMUNITY_NAME_ARGUMENT])
+    private val resolvedCommunityName = MutableStateFlow(communityName)
     private val _uiState = MutableStateFlow<LemmyCommunityUiState>(LemmyCommunityUiState.Loading)
     val uiState: StateFlow<LemmyCommunityUiState> = _uiState.asStateFlow()
     private val _composerState = MutableStateFlow(LemmyPostComposerUiState())
@@ -56,11 +57,11 @@ class LemmyCommunityViewModel @Inject constructor(
     val effects: SharedFlow<LemmyCommunityEffect> = _effects.asSharedFlow()
 
     val posts: Flow<PagingData<LemmyPostUiModel>> =
-        combine(accountStore.accounts, accountStore.activeAccountIds, _sort) { accounts, activeIds, sort ->
-            Triple(accounts.lemmyAccount(activeIds), activeIds, sort)
+        combine(accountStore.accounts, accountStore.activeAccountIds, _sort, resolvedCommunityName) { accounts, activeIds, sort, community ->
+            Triple(accounts.lemmyAccount(activeIds), sort, community)
         }
             .distinctUntilChanged()
-            .flatMapLatest { (account, _, sort) ->
+            .flatMapLatest { (account, sort, community) ->
                 if (account == null) {
                     flowOf(PagingData.empty())
                 } else {
@@ -69,7 +70,7 @@ class LemmyCommunityViewModel @Inject constructor(
                             account = account,
                             sort = sort,
                             feedType = LemmyFeedType.ALL,
-                            communityName = communityName,
+                            communityName = community,
                         )
                         .map { pagingData -> pagingData.map(LemmyPostMapper::domainToUi) }
                 }
@@ -197,6 +198,7 @@ class LemmyCommunityViewModel @Inject constructor(
             _uiState.value = LemmyCommunityUiState.Loading
             when (val result = lemmyRepository.getCommunity(lemmyAccount(), communityName)) {
                 is AppResult.Success -> {
+                    resolvedCommunityName.value = result.data.name
                     _uiState.value = LemmyCommunityUiState.Success(
                         community = LemmyPostMapper.communityToUi(result.data),
                     )

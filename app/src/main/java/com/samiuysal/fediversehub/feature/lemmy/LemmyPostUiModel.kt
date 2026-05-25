@@ -7,6 +7,7 @@ data class LemmyPostUiModel(
     val id: String,
     val title: String,
     val communityId: String?,
+    val communityActorId: String?,
     val community: String,
     val domain: String?,
     val author: String,
@@ -26,6 +27,8 @@ data class LemmyPostUiModel(
 @Immutable
 data class CommentUiModel(
     val id: String,
+    val postId: String,
+    val postTitle: String? = null,
     val parentId: String?,
     val author: String,
     val text: String,

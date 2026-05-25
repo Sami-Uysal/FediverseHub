@@ -19,9 +19,9 @@ object MockLemmyData {
             commentCount = 73,
             previewText = "I am comparing per-account RemoteKeys vs per-feed RemoteKeys for mixed Mastodon, Lemmy and Pixelfed clients.",
             comments = listOf(
-                LemmyComment("c1", null, "room_mediator", "Keep the remote key scoped by accountId + platform + feed type.", 0, false),
-                LemmyComment("c2", "c1", "pagingfan", "This also makes refresh invalidation much less surprising.", 1, false),
-                LemmyComment("c3", null, "api_edge", "Do not let Lemmy sort modes share the same cache namespace.", 0, false),
+                LemmyComment("c1", "l1", null, null, "room_mediator", "Keep the remote key scoped by accountId + platform + feed type.", 0, false),
+                LemmyComment("c2", "l1", null, "c1", "pagingfan", "This also makes refresh invalidation much less surprising.", 1, false),
+                LemmyComment("c3", "l1", null, null, "api_edge", "Do not let Lemmy sort modes share the same cache namespace.", 0, false),
             ),
         ),
         LemmyPost(
@@ -37,8 +37,8 @@ object MockLemmyData {
             commentCount = 29,
             previewText = "The tree renders as a LazyColumn with depth metadata and local collapse state.",
             comments = listOf(
-                LemmyComment("c4", null, "lazy_keys", "Flattening is the right default for large trees.", 0, false),
-                LemmyComment("c5", "c4", "state_holder", "Collapse state can live by comment id in the ViewModel.", 1, true),
+                LemmyComment("c4", "l2", null, null, "lazy_keys", "Flattening is the right default for large trees.", 0, false),
+                LemmyComment("c5", "l2", null, "c4", "state_holder", "Collapse state can live by comment id in the ViewModel.", 1, true),
             ),
         ),
         LemmyPost(
@@ -68,7 +68,7 @@ object MockLemmyData {
             commentCount = 64,
             previewText = "Keep sort mode, community scope and account id in the remote key table from day one.",
             comments = listOf(
-                LemmyComment("c6", null, "db_index", "A compound index on account + sort + community pays off quickly.", 0, false),
+                LemmyComment("c6", "l4", null, null, "db_index", "A compound index on account + sort + community pays off quickly.", 0, false),
             ),
         ),
     )

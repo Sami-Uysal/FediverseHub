@@ -10,7 +10,13 @@ import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyCommunity
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPost
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPostPage
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyProfile
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyNotification
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyNotificationType
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySearchCategory
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySearchResult
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySearchUser
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -51,6 +57,91 @@ class MockLemmyRepository @Inject constructor() : LemmyRepository {
     ): AppResult<List<LemmyComment>> =
         AppResult.Success(MockLemmyData.posts.firstOrNull { it.id == postId }?.comments.orEmpty())
 
+    override suspend fun getOwnProfile(account: Account): AppResult<LemmyProfile> =
+        AppResult.Success(
+            LemmyProfile(
+                id = account.id,
+                name = account.username,
+                displayName = account.displayName ?: account.username,
+                avatarUrl = account.avatarUrl,
+                bannerUrl = null,
+                bio = "Mock Lemmy profile",
+                postCount = MockLemmyData.posts.size,
+                commentCount = MockLemmyData.posts.sumOf { it.comments.size },
+                posts = MockLemmyData.posts,
+                comments = MockLemmyData.posts.flatMap { it.comments },
+                savedPosts = MockLemmyData.posts.take(2).map { it.copy(saved = true) },
+                savedComments = MockLemmyData.posts.flatMap { post ->
+                    post.comments.map { it.copy(postTitle = post.title) }
+                }.take(2),
+            ),
+        )
+
+    override suspend fun getProfile(account: Account, username: String): AppResult<LemmyProfile> =
+        getOwnProfile(account).let { result ->
+            when (result) {
+                is AppResult.Success -> AppResult.Success(
+                    result.data.copy(
+                        id = username,
+                        name = username,
+                        displayName = username,
+                        bio = "Mock Lemmy user",
+                        savedPosts = emptyList(),
+                        savedComments = emptyList(),
+                    ),
+                )
+                is AppResult.Failure -> result
+            }
+        }
+
+    override suspend fun search(
+        account: Account,
+        query: String,
+        category: LemmySearchCategory,
+    ): AppResult<LemmySearchResult> {
+        val posts = MockLemmyData.posts.filter {
+            it.title.contains(query, ignoreCase = true) ||
+                it.communityName.contains(query, ignoreCase = true)
+        }.ifEmpty { MockLemmyData.posts.take(2) }
+        return AppResult.Success(
+            LemmySearchResult(
+                posts = posts.takeIf { category == LemmySearchCategory.POSTS }.orEmpty(),
+                communities = posts.map { MockLemmyData.communityFor(it.communityName) }
+                    .distinctBy { it.name }
+                    .takeIf { category == LemmySearchCategory.COMMUNITIES }
+                    .orEmpty(),
+                users = listOf(
+                    LemmySearchUser("mock-user", "cache-first", "Cache First", null, "Mock Lemmy user"),
+                ).takeIf { category == LemmySearchCategory.USERS }.orEmpty(),
+            ),
+        )
+    }
+
+    override suspend fun getReplies(account: Account): AppResult<List<LemmyNotification>> =
+        AppResult.Success(
+            MockLemmyData.posts.flatMap { post ->
+                post.comments.take(1).map {
+                    LemmyNotification(
+                        id = "reply-${it.id}",
+                        type = LemmyNotificationType.REPLY,
+                        postId = post.id,
+                        postTitle = post.title,
+                        communityName = post.communityName,
+                        actorName = it.authorName,
+                        text = it.content,
+                        score = it.score,
+                        createdAt = post.publishedAt,
+                        read = false,
+                    )
+                }
+            },
+        )
+
+    override suspend fun getMentions(account: Account): AppResult<List<LemmyNotification>> =
+        AppResult.Success(
+            getReplies(account).let { (it as AppResult.Success).data.map { n -> n.copy(type = LemmyNotificationType.MENTION) } },
+        )
+
     override suspend fun createComment(
         account: Account,
         postId: String,
@@ -60,6 +151,7 @@ class MockLemmyRepository @Inject constructor() : LemmyRepository {
         AppResult.Success(
             LemmyComment(
                 id = "mock-comment-${content.hashCode()}",
+                postId = postId,
                 parentId = parentId,
                 authorName = account.displayName ?: account.username,
                 content = content,

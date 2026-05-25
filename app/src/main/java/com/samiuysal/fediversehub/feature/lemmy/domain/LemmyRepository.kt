@@ -22,6 +22,20 @@ interface LemmyRepository {
 
     suspend fun getComments(account: Account, postId: String): AppResult<List<LemmyComment>>
 
+    suspend fun getOwnProfile(account: Account): AppResult<LemmyProfile>
+
+    suspend fun getProfile(account: Account, username: String): AppResult<LemmyProfile>
+
+    suspend fun search(
+        account: Account,
+        query: String,
+        category: LemmySearchCategory,
+    ): AppResult<LemmySearchResult>
+
+    suspend fun getReplies(account: Account): AppResult<List<LemmyNotification>>
+
+    suspend fun getMentions(account: Account): AppResult<List<LemmyNotification>>
+
     suspend fun createComment(
         account: Account,
         postId: String,

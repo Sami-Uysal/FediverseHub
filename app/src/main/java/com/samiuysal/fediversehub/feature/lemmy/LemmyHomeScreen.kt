@@ -286,7 +286,7 @@ private fun LemmyPostList(
             LemmyPostCard(
                 post = post,
                 onClick = { onPostClick(post.id) },
-                onCommunityClick = { onCommunityClick(post.communityId ?: post.community) },
+                onCommunityClick = { onCommunityClick(post.communityId ?: post.communityActorId ?: post.community) },
                 onPostAction = onPostAction,
             )
         }
@@ -325,7 +325,7 @@ private fun LemmyPostList(
                 LemmyPostCard(
                     post = visiblePost,
                     onClick = { onPostClick(visiblePost.id) },
-                    onCommunityClick = { onCommunityClick(visiblePost.communityId ?: visiblePost.community) },
+                    onCommunityClick = { onCommunityClick(visiblePost.communityId ?: visiblePost.communityActorId ?: visiblePost.community) },
                     onPostAction = onPostAction,
                 )
             }

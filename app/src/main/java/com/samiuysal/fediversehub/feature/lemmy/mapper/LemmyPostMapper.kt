@@ -12,6 +12,7 @@ object LemmyPostMapper {
         id = domain.id,
         title = domain.title,
         communityId = domain.communityId,
+        communityActorId = domain.communityActorId,
         community = domain.communityName,
         domain = domain.domain,
         author = "u/${domain.authorName}",
@@ -29,6 +30,8 @@ object LemmyPostMapper {
 
     fun commentToUi(comment: LemmyComment): CommentUiModel = CommentUiModel(
         id = comment.id,
+        postId = comment.postId,
+        postTitle = comment.postTitle,
         parentId = comment.parentId,
         author = comment.authorName,
         text = comment.content,
