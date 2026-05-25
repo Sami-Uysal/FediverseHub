@@ -14,9 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,6 +79,7 @@ fun PixelfedProfileRoute(
     viewModel: PixelfedProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val followState by viewModel.followState.collectAsStateWithLifecycle()
     val media = viewModel.profileMedia.collectAsLazyPagingItems()
 
     LaunchedEffect(selectedAccount?.id) {
@@ -92,8 +101,8 @@ fun PixelfedProfileRoute(
         )
         when (val state = uiState) {
             PixelfedProfileUiState.NoAccount -> PixelfedAuthRoute(
-                oauthCallbackUri = oauthCallbackUri,
-                onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                oauthCallbackUri = null,
+                onOAuthCallbackConsumed = {},
             )
             PixelfedProfileUiState.Loading -> AppLoading(
                 message = "Loading Pixelfed profile...",
@@ -106,6 +115,76 @@ fun PixelfedProfileRoute(
             )
             is PixelfedProfileUiState.Success -> PixelfedProfileContent(
                 profile = state.profile,
+                followState = followState,
+                onFollowClick = viewModel::toggleFollow,
+                media = media,
+                onPostSelected = onPostSelected,
+                onMediaSelected = onMediaSelected,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+fun PixelfedAccountProfileRoute(
+    accountId: String,
+    selectedAccount: Account?,
+    contentPadding: PaddingValues,
+    onBack: () -> Unit,
+    onPostSelected: (String) -> Unit,
+    onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    viewModel: PixelfedProfileViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val followState by viewModel.followState.collectAsStateWithLifecycle()
+    val media = viewModel.profileMedia.collectAsLazyPagingItems()
+
+    LaunchedEffect(selectedAccount?.id, accountId) {
+        viewModel.selectRemoteAccount(selectedAccount, accountId)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .padding(end = AppSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Geri")
+            }
+            Text(
+                text = "Pixelfed profil",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+        when (val state = uiState) {
+            PixelfedProfileUiState.NoAccount -> EmptyState(
+                title = "Profil açılamadı",
+                message = "Bu Pixelfed profili şu an yüklenemedi.",
+                modifier = Modifier.fillMaxSize(),
+            )
+            PixelfedProfileUiState.Loading -> AppLoading(
+                message = "Pixelfed profili yükleniyor...",
+                modifier = Modifier.fillMaxSize(),
+            )
+            is PixelfedProfileUiState.Error -> AppErrorState(
+                message = state.message,
+                onRetry = media::refresh,
+                modifier = Modifier.fillMaxSize(),
+            )
+            is PixelfedProfileUiState.Success -> PixelfedProfileContent(
+                profile = state.profile,
+                followState = followState,
+                onFollowClick = viewModel::toggleFollow,
                 media = media,
                 onPostSelected = onPostSelected,
                 onMediaSelected = onMediaSelected,
@@ -118,6 +197,8 @@ fun PixelfedProfileRoute(
 @Composable
 private fun PixelfedProfileContent(
     profile: PixelfedProfile,
+    followState: PixelfedFollowUiState,
+    onFollowClick: () -> Unit,
     media: androidx.paging.compose.LazyPagingItems<PixelfedPostUiModel>,
     onPostSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
@@ -130,7 +211,11 @@ private fun PixelfedProfileContent(
         verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-            PixelfedProfileHeader(profile = profile)
+            PixelfedProfileHeader(
+                profile = profile,
+                followState = followState,
+                onFollowClick = onFollowClick,
+            )
         }
         when {
             media.loadState.refresh is LoadState.Loading && media.itemCount == 0 -> {
@@ -193,7 +278,11 @@ private fun PixelfedProfileContent(
 }
 
 @Composable
-private fun PixelfedProfileHeader(profile: PixelfedProfile) {
+private fun PixelfedProfileHeader(
+    profile: PixelfedProfile,
+    followState: PixelfedFollowUiState,
+    onFollowClick: () -> Unit,
+) {
     Column {
         profile.headerUrl?.let { headerUrl ->
             val context = LocalContext.current
@@ -253,6 +342,15 @@ private fun PixelfedProfileHeader(profile: PixelfedProfile) {
                     ProfileCount(profile.followingCount, "following")
                 }
             }
+            PixelfedFollowButton(state = followState, onClick = onFollowClick)
+        }
+        followState.errorMessage?.let { message ->
+            Text(
+                text = message,
+                modifier = Modifier.padding(start = AppSpacing.lg, end = AppSpacing.lg, bottom = AppSpacing.sm),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
         if (profile.note.isNotBlank()) {
             Text(
@@ -262,6 +360,30 @@ private fun PixelfedProfileHeader(profile: PixelfedProfile) {
             )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+    }
+}
+
+@Composable
+private fun PixelfedFollowButton(
+    state: PixelfedFollowUiState,
+    onClick: () -> Unit,
+) {
+    if (state.isOwnProfile) return
+    val content: @Composable () -> Unit = {
+        if (state.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+        } else {
+            Text(if (state.isFollowing) "Unfollow" else "Follow")
+        }
+    }
+    if (state.isFollowing) {
+        OutlinedButton(onClick = onClick, enabled = !state.isLoading) {
+            content()
+        }
+    } else {
+        Button(onClick = onClick, enabled = !state.isLoading) {
+            content()
+        }
     }
 }
 

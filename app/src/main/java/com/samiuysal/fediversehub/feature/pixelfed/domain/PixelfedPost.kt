@@ -2,6 +2,7 @@ package com.samiuysal.fediversehub.feature.pixelfed.domain
 
 data class PixelfedPost(
     val id: String,
+    val authorAccountId: String,
     val authorDisplayName: String,
     val authorUsername: String,
     val authorAvatarUrl: String?,

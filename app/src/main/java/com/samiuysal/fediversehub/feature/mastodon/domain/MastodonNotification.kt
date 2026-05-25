@@ -4,6 +4,7 @@ data class MastodonNotification(
     val id: String,
     val type: MastodonNotificationType,
     val createdAt: String?,
+    val accountId: String,
     val accountDisplayName: String,
     val accountUsername: String,
     val accountAvatarUrl: String?,

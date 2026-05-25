@@ -3,6 +3,7 @@ package com.samiuysal.fediversehub.feature.mastodon.domain
 data class MastodonPost(
     val id: String,
     val detailId: String = id,
+    val authorAccountId: String,
     val authorDisplayName: String,
     val authorUsername: String,
     val authorAvatarUrl: String?,

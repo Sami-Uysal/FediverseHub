@@ -10,6 +10,7 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileField
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRelationship
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonHashtag
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchAccount
@@ -58,6 +59,18 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
         pagingSourceFactory = { MockMastodonPagingSource() },
     ).flow
 
+    override fun getHashtagTimelinePagingData(
+        account: Account,
+        hashtag: String,
+    ): Flow<PagingData<MastodonPost>> = Pager(
+        config = PagingConfig(
+            pageSize = MastodonTimelinePage.DEFAULT_LIMIT,
+            initialLoadSize = MastodonTimelinePage.DEFAULT_LIMIT,
+            enablePlaceholders = false,
+        ),
+        pagingSourceFactory = { MockMastodonPagingSource() },
+    ).flow
+
     override suspend fun getOwnProfile(
         account: Account,
     ): AppResult<MastodonProfile> = AppResult.Success(
@@ -77,6 +90,37 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
             ),
         ),
     )
+
+    override suspend fun getProfile(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonProfile> = AppResult.Success(
+        MastodonProfile(
+            id = accountId,
+            displayName = "Fediverse Builder",
+            username = "@builder@mastodon.social",
+            avatarUrl = null,
+            headerUrl = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=420&fit=crop",
+            note = "Mock account profile.",
+            followersCount = 420,
+            followingCount = 88,
+            statusesCount = 64,
+            fields = emptyList(),
+        ),
+    )
+
+    override suspend fun getRelationship(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonRelationship> =
+        AppResult.Success(MastodonRelationship(accountId = accountId, following = false, requested = false))
+
+    override suspend fun setFollowing(
+        account: Account,
+        accountId: String,
+        following: Boolean,
+    ): AppResult<MastodonRelationship> =
+        AppResult.Success(MastodonRelationship(accountId = accountId, following = following, requested = false))
 
     override suspend fun search(
         account: Account,
@@ -220,6 +264,7 @@ class MockMastodonRepository @Inject constructor() : MastodonRepository {
         MockMastodonData.homeTimeline.first().copy(
             id = "mock-new-post-${text.hashCode()}",
             detailId = "mock-new-post-${text.hashCode()}",
+            authorAccountId = account.id,
             authorDisplayName = account.displayName ?: account.username,
             authorUsername = account.username,
             authorAvatarUrl = account.avatarUrl,

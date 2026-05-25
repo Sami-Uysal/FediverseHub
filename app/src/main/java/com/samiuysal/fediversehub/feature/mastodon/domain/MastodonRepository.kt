@@ -20,9 +20,30 @@ interface MastodonRepository {
         filter: MastodonProfileTimelineFilter,
     ): Flow<PagingData<MastodonPost>>
 
+    fun getHashtagTimelinePagingData(
+        account: Account,
+        hashtag: String,
+    ): Flow<PagingData<MastodonPost>>
+
     suspend fun getOwnProfile(
         account: Account,
     ): AppResult<MastodonProfile>
+
+    suspend fun getProfile(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonProfile>
+
+    suspend fun getRelationship(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonRelationship>
+
+    suspend fun setFollowing(
+        account: Account,
+        accountId: String,
+        following: Boolean,
+    ): AppResult<MastodonRelationship>
 
     suspend fun search(
         account: Account,

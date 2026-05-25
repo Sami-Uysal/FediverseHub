@@ -244,7 +244,7 @@ private fun MastodonNotificationRow(
                 if (targetPostId != null) {
                     onPostSelected(targetPostId)
                 } else {
-                    onProfileSelected(notification.actorUsername)
+                    onProfileSelected(notification.actorAccountId)
                 }
             },
         color = MaterialTheme.colorScheme.background,
@@ -262,6 +262,7 @@ private fun MastodonNotificationRow(
                     imageUrl = notification.actorAvatarUrl,
                     name = notification.actorDisplayName,
                     size = 42.dp,
+                    modifier = Modifier.clickable { onProfileSelected(notification.actorAccountId) },
                 )
                 Column(
                     modifier = Modifier.weight(1f),

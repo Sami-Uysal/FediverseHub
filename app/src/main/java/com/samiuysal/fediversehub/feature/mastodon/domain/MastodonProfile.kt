@@ -18,6 +18,12 @@ data class MastodonProfileField(
     val value: String,
 )
 
+data class MastodonRelationship(
+    val accountId: String,
+    val following: Boolean,
+    val requested: Boolean,
+)
+
 enum class MastodonProfileTimelineFilter {
     POSTS,
     REPLIES,

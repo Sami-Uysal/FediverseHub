@@ -67,6 +67,7 @@ fun PixelfedPostDetailScreen(
     onCommentDraftChange: (String) -> Unit,
     onSubmitComment: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -88,6 +89,7 @@ fun PixelfedPostDetailScreen(
                 onCommentDraftChange = onCommentDraftChange,
                 onSubmitComment = onSubmitComment,
                 onMediaSelected = onMediaSelected,
+                onAccountSelected = onAccountSelected,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -140,6 +142,7 @@ private fun PixelfedPostDetailContent(
     onCommentDraftChange: (String) -> Unit,
     onSubmitComment: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -151,6 +154,7 @@ private fun PixelfedPostDetailContent(
                 post = state.post,
                 onLikeClick = onLikeClick,
                 onMediaSelected = onMediaSelected,
+                onAccountSelected = onAccountSelected,
             )
         }
         item(key = "pixelfed-comment-composer", contentType = "pixelfed-comment-composer") {
@@ -271,6 +275,7 @@ private fun PixelfedPostHero(
     post: PixelfedPostUiModel,
     onLikeClick: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
 ) {
     Column {
         Row(
@@ -284,8 +289,13 @@ private fun PixelfedPostHero(
                 imageUrl = post.avatarUrl,
                 name = post.displayName,
                 size = 42.dp,
+                modifier = Modifier.clickable { onAccountSelected(post.authorAccountId) },
             )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onAccountSelected(post.authorAccountId) },
+            ) {
                 Text(
                     text = post.displayName,
                     style = MaterialTheme.typography.titleMedium,
@@ -502,6 +512,7 @@ fun PixelfedPostDetailScreenPreview() {
             onCommentDraftChange = {},
             onSubmitComment = {},
             onMediaSelected = { _, _, _ -> },
+            onAccountSelected = {},
         )
     }
 }

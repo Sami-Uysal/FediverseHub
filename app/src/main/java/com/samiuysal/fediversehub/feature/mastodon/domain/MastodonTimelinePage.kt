@@ -7,6 +7,6 @@ data class MastodonTimelinePage(
     val limit: Int = DEFAULT_LIMIT,
 ) {
     companion object {
-        const val DEFAULT_LIMIT = 15
+        const val DEFAULT_LIMIT = 30
     }
 }

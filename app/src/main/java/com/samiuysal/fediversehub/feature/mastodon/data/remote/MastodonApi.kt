@@ -7,6 +7,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonHashtagDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonPreviewCardDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonRelationshipDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonTimelinePage
@@ -33,6 +34,30 @@ interface MastodonApi {
         instanceUrl: String,
         accessToken: String,
     ): MastodonAccountDto
+
+    suspend fun getAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonAccountDto
+
+    suspend fun getRelationships(
+        instanceUrl: String,
+        accessToken: String,
+        accountIds: List<String>,
+    ): List<MastodonRelationshipDto>
+
+    suspend fun followAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonRelationshipDto
+
+    suspend fun unfollowAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonRelationshipDto
 
     suspend fun getHomeTimeline(
         instanceUrl: String,
@@ -69,6 +94,14 @@ interface MastodonApi {
         onlyMedia: Boolean = false,
     ): List<MastodonStatusDto>
 
+    suspend fun getHashtagTimeline(
+        instanceUrl: String,
+        accessToken: String,
+        hashtag: String,
+        maxId: String? = null,
+        limit: Int = 30,
+    ): List<MastodonStatusDto>
+
     suspend fun search(
         instanceUrl: String,
         accessToken: String,
@@ -79,19 +112,19 @@ interface MastodonApi {
 
     suspend fun getTrendingStatuses(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         limit: Int = 20,
     ): List<MastodonStatusDto>
 
     suspend fun getTrendingTags(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         limit: Int = 20,
     ): List<MastodonHashtagDto>
 
     suspend fun getTrendingLinks(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         limit: Int = 20,
     ): List<MastodonPreviewCardDto>
 

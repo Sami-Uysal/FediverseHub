@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class PixelfedPostUiModel(
     val id: String,
+    val authorAccountId: String,
     val displayName: String,
     val username: String,
     val avatarUrl: String?,

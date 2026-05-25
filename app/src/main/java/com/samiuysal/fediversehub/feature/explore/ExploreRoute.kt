@@ -81,6 +81,7 @@ fun ExploreRoute(
     onPixelfedPostSelected: (String) -> Unit,
     onLemmyPostSelected: (String) -> Unit,
     onLemmyCommunitySelected: (String) -> Unit,
+    onMastodonAccountSelected: (String) -> Unit,
     onHashtagSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
     viewModel: ExploreViewModel = hiltViewModel(),
@@ -105,6 +106,7 @@ fun ExploreRoute(
             onTabSelected = viewModel::selectMastodonTab,
             onRetry = { viewModel.refreshMastodon(selectedAccount) },
             onPostSelected = onPostSelected,
+            onAccountSelected = onMastodonAccountSelected,
             onHashtagSelected = onHashtagSelected,
         )
         PlatformType.PIXELFED -> {
@@ -144,6 +146,7 @@ private fun MastodonExploreContent(
     onTabSelected: (MastodonExploreTab) -> Unit,
     onRetry: () -> Unit,
     onPostSelected: (String) -> Unit,
+    onAccountSelected: (String) -> Unit,
     onHashtagSelected: (String) -> Unit,
 ) {
     Column(
@@ -153,18 +156,13 @@ private fun MastodonExploreContent(
     ) {
         ExploreHeader(
             title = "Keşfet",
-            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Mastodon hesabı yok",
+            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Public Mastodon trendleri",
         )
         MastodonExploreTabs(
             selectedTab = state.selectedTab,
             onTabSelected = onTabSelected,
         )
         when {
-            account?.accessToken.isNullOrBlank() -> EmptyState(
-                title = "Mastodon hesabı bağlı değil",
-                message = "Trending içerik için önce Mastodon hesabı bağla.",
-                modifier = Modifier.weight(1f),
-            )
             state.isSelectedTabLoading -> AppLoading(
                 message = "Keşfet yükleniyor...",
                 modifier = Modifier.weight(1f),
@@ -177,6 +175,7 @@ private fun MastodonExploreContent(
             state.selectedTab == MastodonExploreTab.POSTS -> MastodonExplorePosts(
                 posts = state.posts,
                 onPostSelected = onPostSelected,
+                onAccountSelected = onAccountSelected,
                 modifier = Modifier.weight(1f),
             )
             state.selectedTab == MastodonExploreTab.TAGS -> MastodonExploreTags(
@@ -239,6 +238,7 @@ private fun MastodonExploreTabs(
 private fun MastodonExplorePosts(
     posts: List<MastodonPostUiModel>,
     onPostSelected: (String) -> Unit,
+    onAccountSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (posts.isEmpty()) {
@@ -255,7 +255,11 @@ private fun MastodonExplorePosts(
             key = { it.id },
             contentType = { "mastodon-explore-post" },
         ) { post ->
-            ExplorePostCard(post = post, onClick = { onPostSelected(post.detailId) })
+            ExplorePostCard(
+                post = post,
+                onClick = { onPostSelected(post.detailId) },
+                onAuthorClick = { onAccountSelected(post.authorAccountId) },
+            )
         }
     }
 }
@@ -264,6 +268,7 @@ private fun MastodonExplorePosts(
 private fun ExplorePostCard(
     post: MastodonPostUiModel,
     onClick: () -> Unit,
+    onAuthorClick: () -> Unit,
 ) {
     val mediaItems = remember(post.media) {
         post.media.map { AppMediaItem(it.previewUrl, it.fullUrl, it.altText) }
@@ -294,6 +299,7 @@ private fun ExplorePostCard(
         linkPreview = linkPreview,
         actions = actions,
         onClick = onClick,
+        onAuthorClick = onAuthorClick,
     )
 }
 
@@ -397,7 +403,7 @@ private fun LemmyExploreContent(
     ) {
         ExploreHeader(
             title = "Lemmy Keşfet",
-            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Lemmy hesabı yok",
+            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Public Lemmy keşfi",
         )
         LemmyExploreTabs(
             selectedTab = selectedTab,
@@ -408,11 +414,6 @@ private fun LemmyExploreContent(
             onSortSelected = onSortSelected,
         )
         when {
-            account?.accessToken.isNullOrBlank() -> EmptyState(
-                title = "Lemmy hesabı bağlı değil",
-                message = "Lemmy keşfet için önce giriş yap.",
-                modifier = Modifier.weight(1f),
-            )
             posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> AppLoading(
                 message = "Lemmy keşfet yükleniyor...",
                 modifier = Modifier.weight(1f),
@@ -652,7 +653,7 @@ private fun LemmyCommunitiesDiscovery(
         ) { community ->
             LemmyCommunityDiscoveryRow(
                 community = community,
-                onClick = { onCommunitySelected(community.name) },
+                onClick = { onCommunitySelected(community.id.ifBlank { community.actorId ?: community.name }) },
             )
         }
     }
@@ -716,14 +717,9 @@ private fun PixelfedExploreContent(
     ) {
         ExploreHeader(
             title = "Keşfet",
-            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Pixelfed hesabı yok",
+            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Public Pixelfed medya",
         )
         when {
-            account?.accessToken.isNullOrBlank() -> EmptyState(
-                title = "Pixelfed hesabı bağlı değil",
-                message = "Pixelfed Explore için önce giriş yap.",
-                modifier = Modifier.weight(1f),
-            )
             posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> AppLoading(
                 message = "Pixelfed keşfet yükleniyor...",
                 modifier = Modifier.weight(1f),

@@ -25,6 +25,7 @@ object MastodonTimelineMapper {
         return MastodonPost(
             id = dto.id,
             detailId = status.id,
+            authorAccountId = status.account.id,
             authorDisplayName = htmlToPlainText(displayName),
             authorUsername = status.account.acct.ifBlank { status.account.username },
             authorAvatarUrl = status.account.avatarStatic ?: status.account.avatar,
@@ -49,6 +50,7 @@ object MastodonTimelineMapper {
     fun domainToUi(domain: MastodonPost): MastodonPostUiModel = MastodonPostUiModel(
         id = domain.id,
         detailId = domain.detailId,
+        authorAccountId = domain.authorAccountId,
         displayName = domain.authorDisplayName,
         username = "@${domain.authorUsername}",
         avatarUrl = domain.authorAvatarUrl,

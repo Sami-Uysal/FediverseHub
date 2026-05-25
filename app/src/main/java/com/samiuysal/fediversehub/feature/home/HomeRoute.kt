@@ -51,7 +51,9 @@ fun HomeRoute(
     selectedAccount: Account?,
     onPlatformSelected: (PlatformType) -> Unit,
     onMastodonPostSelected: (String) -> Unit,
+    onMastodonAccountSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
+    onPixelfedAccountSelected: (String) -> Unit,
     onLemmyPostSelected: (String) -> Unit,
     onLemmyCommunitySelected: (String) -> Unit,
     onMastodonMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
@@ -77,7 +79,7 @@ fun HomeRoute(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                HomeEffect.NavigateToMastodonLogin -> onMastodonUnauthorized()
+                HomeEffect.NavigateToProfile -> onMastodonUnauthorized()
             }
         }
     }
@@ -103,6 +105,7 @@ fun HomeRoute(
                     modifier = modifier,
                     showTopBar = false,
                     onPostClick = onMastodonPostSelected,
+                    onAuthorClick = onMastodonAccountSelected,
                     onMediaClick = onMastodonMediaSelected,
                     onPostAction = viewModel::onMastodonAction,
                 )
@@ -147,6 +150,7 @@ fun HomeRoute(
                     modifier = modifier,
                     showTopBar = false,
                     onPostClick = onPixelfedPostSelected,
+                    onAuthorClick = onPixelfedAccountSelected,
                     onMediaClick = onMastodonMediaSelected,
                     onLikeClick = viewModel::onPixelfedLike,
                     onCommentsClick = viewModel::openPixelfedComments,

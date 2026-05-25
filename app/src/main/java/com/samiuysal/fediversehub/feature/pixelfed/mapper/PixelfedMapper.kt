@@ -2,12 +2,19 @@ package com.samiuysal.fediversehub.feature.pixelfed.mapper
 
 import androidx.core.text.HtmlCompat
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.pixelfed.PixelfedPostUiModel
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedComment
+import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedHashtag
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedMedia
+import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedNotification
+import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedNotificationType
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedPost
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedProfile
+import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedSearchAccount
+import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedSearchResult
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
@@ -17,6 +24,7 @@ object PixelfedMapper {
         val status = dto.reblog ?: dto
         return PixelfedPost(
             id = status.id,
+            authorAccountId = status.account.id,
             authorDisplayName = htmlToPlainText(status.account.displayName.ifBlank { status.account.username }),
             authorUsername = status.account.acct.ifBlank { status.account.username },
             authorAvatarUrl = status.account.avatarStatic ?: status.account.avatar,
@@ -49,9 +57,30 @@ object PixelfedMapper {
             statusesCount = dto.statusesCount,
         )
 
+    fun searchToDomain(dto: MastodonSearchDto): PixelfedSearchResult =
+        PixelfedSearchResult(
+            posts = dto.statuses.map(::statusToDomain),
+            accounts = dto.accounts.map(::accountToSearchDomain),
+            hashtags = dto.hashtags.map { PixelfedHashtag(name = it.name) },
+        )
+
+    fun notificationToDomain(dto: MastodonNotificationDto): PixelfedNotification =
+        PixelfedNotification(
+            id = dto.id,
+            type = dto.type.toPixelfedNotificationType(),
+            actorAccountId = dto.account.id,
+            actorDisplayName = htmlToPlainText(dto.account.displayName.ifBlank { dto.account.username }),
+            actorUsername = "@${dto.account.acct.ifBlank { dto.account.username }}",
+            actorAvatarUrl = dto.account.avatarStatic ?: dto.account.avatar,
+            postId = dto.status?.id,
+            postPreview = dto.status?.content?.let(::htmlToPlainText),
+            createdAt = dto.createdAt,
+        )
+
     fun postToUi(domain: PixelfedPost): PixelfedPostUiModel =
         PixelfedPostUiModel(
             id = domain.id,
+            authorAccountId = domain.authorAccountId,
             displayName = domain.authorDisplayName,
             username = "@${domain.authorUsername}",
             avatarUrl = domain.authorAvatarUrl,
@@ -74,6 +103,25 @@ object PixelfedMapper {
             text = htmlToPlainText(dto.content),
             timeAgo = dto.createdAt.toRelativeTimeLabel(),
         )
+
+    private fun accountToSearchDomain(dto: MastodonAccountDto): PixelfedSearchAccount =
+        PixelfedSearchAccount(
+            id = dto.id,
+            displayName = htmlToPlainText(dto.displayName.ifBlank { dto.username }),
+            username = "@${dto.acct.ifBlank { dto.username }}",
+            avatarUrl = dto.avatarStatic ?: dto.avatar,
+            note = htmlToPlainText(dto.note),
+        )
+
+    private fun String.toPixelfedNotificationType(): PixelfedNotificationType =
+        when (lowercase()) {
+            "favourite" -> PixelfedNotificationType.FAVOURITE
+            "comment" -> PixelfedNotificationType.COMMENT
+            "mention" -> PixelfedNotificationType.MENTION
+            "follow" -> PixelfedNotificationType.FOLLOW
+            "status" -> PixelfedNotificationType.STATUS
+            else -> PixelfedNotificationType.UNKNOWN
+        }
 
     private fun htmlToPlainText(value: String): String =
         HtmlCompat.fromHtml(value, HtmlCompat.FROM_HTML_MODE_COMPACT)

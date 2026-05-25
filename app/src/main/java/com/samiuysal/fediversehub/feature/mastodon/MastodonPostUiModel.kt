@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 data class MastodonPostUiModel(
     val id: String,
     val detailId: String = id,
+    val authorAccountId: String,
     val displayName: String,
     val username: String,
     val avatarUrl: String?,

@@ -15,6 +15,7 @@ fun MastodonPostDetailRoute(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     onUnauthorized: () -> Unit,
     viewModel: MastodonPostDetailViewModel = hiltViewModel(),
 ) {
@@ -34,6 +35,7 @@ fun MastodonPostDetailRoute(
         onBack = onBack,
         onRetry = viewModel::retry,
         onMediaSelected = onMediaSelected,
+        onAccountSelected = onAccountSelected,
         onPostAction = viewModel::onPostAction,
         modifier = Modifier.padding(contentPadding),
     )

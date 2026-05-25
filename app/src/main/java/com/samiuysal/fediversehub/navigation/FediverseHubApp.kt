@@ -1,11 +1,17 @@
 package com.samiuysal.fediversehub.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -16,18 +22,26 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.samiuysal.fediversehub.core.designsystem.component.AppBottomBar
+import com.samiuysal.fediversehub.core.designsystem.component.AppLoading
 import com.samiuysal.fediversehub.core.designsystem.component.AppScaffold
 import com.samiuysal.fediversehub.core.designsystem.theme.PlatformColors
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.core.performance.PerfLogger
 import com.samiuysal.fediversehub.feature.auth.MastodonAuthRoute
+import com.samiuysal.fediversehub.feature.auth.PixelfedAuthRoute
 import com.samiuysal.fediversehub.feature.explore.ExploreRoute
 import com.samiuysal.fediversehub.feature.home.HomeRoute
 import com.samiuysal.fediversehub.feature.lemmy.community.LemmyCommunityRoute
 import com.samiuysal.fediversehub.feature.lemmy.detail.LemmyPostDetailRoute
+import com.samiuysal.fediversehub.feature.lemmy.profile.LemmyUserProfileRoute
 import com.samiuysal.fediversehub.feature.mastodon.detail.MastodonPostDetailRoute
 import com.samiuysal.fediversehub.feature.mastodon.media.FullScreenMediaViewer
+import com.samiuysal.fediversehub.feature.mastodon.searchdetail.MastodonAccountDetailRoute
+import com.samiuysal.fediversehub.feature.mastodon.searchdetail.MastodonHashtagTimelineRoute
 import com.samiuysal.fediversehub.feature.notifications.PlatformNotificationsRoute
+import com.samiuysal.fediversehub.feature.onboarding.OnboardingScreen
 import com.samiuysal.fediversehub.feature.pixelfed.detail.PixelfedPostDetailRoute
+import com.samiuysal.fediversehub.feature.pixelfed.profile.PixelfedAccountProfileRoute
 import com.samiuysal.fediversehub.feature.profile.PlatformProfileRoute
 import com.samiuysal.fediversehub.feature.search.PlatformSearchRoute
 import com.samiuysal.fediversehub.feature.settings.SettingsRoute
@@ -42,17 +56,68 @@ fun FediverseHubApp(
     val appState by appStateViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: AppDestination.HOME
+    var onboardingTargetRoute by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(oauthCallbackUri) {
-        if (oauthCallbackUri != null) {
-            when (oauthCallbackUri.path) {
-                "/mastodon" -> appStateViewModel.selectPlatform(PlatformType.MASTODON)
-                "/pixelfed" -> appStateViewModel.selectPlatform(PlatformType.PIXELFED)
+    LaunchedEffect(Unit) {
+        PerfLogger.log("app_start_compose")
+    }
+
+    LaunchedEffect(oauthCallbackUri, appState.onboardingSeen) {
+        if (oauthCallbackUri != null && appState.onboardingSeen != null) {
+            val targetRoute = when (oauthCallbackUri.path) {
+                "/mastodon" -> {
+                    appStateViewModel.selectPlatform(PlatformType.MASTODON)
+                    AppDestination.AUTH_MASTODON
+                }
+                "/pixelfed" -> {
+                    appStateViewModel.selectPlatform(PlatformType.PIXELFED)
+                    AppDestination.AUTH_PIXELFED
+                }
+                else -> null
             }
-            navController.navigate(AppDestination.PROFILE) {
-                launchSingleTop = true
+            if (targetRoute != null) {
+                navController.navigate(targetRoute) {
+                    launchSingleTop = true
+                }
             }
         }
+    }
+
+    LaunchedEffect(appState.onboardingSeen, onboardingTargetRoute) {
+        val targetRoute = onboardingTargetRoute
+        if (appState.onboardingSeen == true && targetRoute != null) {
+            navController.navigate(targetRoute) {
+                launchSingleTop = true
+                popUpTo(AppDestination.HOME)
+            }
+            onboardingTargetRoute = null
+        }
+    }
+
+    if (appState.onboardingSeen == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            AppLoading(message = "Hazırlanıyor...")
+        }
+        return
+    }
+
+    if (appState.onboardingSeen == false && oauthCallbackUri == null) {
+        OnboardingScreen(
+            selectedPlatform = appState.selectedPlatform,
+            onPlatformSelected = appStateViewModel::selectPlatform,
+            onAddAccount = {
+                onboardingTargetRoute = AppDestination.PROFILE
+                appStateViewModel.completeOnboarding()
+            },
+            onExplore = {
+                onboardingTargetRoute = AppDestination.EXPLORE
+                appStateViewModel.completeOnboarding()
+            },
+        )
+        return
     }
 
     val showBottomBar = AppDestination.bottomNavItems.any { it.route == selectedRoute }
@@ -94,14 +159,20 @@ fun FediverseHubApp(
                     onMastodonPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
+                    onMastodonAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.mastodonAccountDetail(accountId))
+                    },
                     onPixelfedPostSelected = { postId ->
                         navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
+                    onPixelfedAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.pixelfedAccountDetail(accountId))
                     },
                     onLemmyPostSelected = { postId ->
                         navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
                     },
                     onLemmyCommunitySelected = { communityName ->
-                        navController.navigate(AppDestination.lemmyCommunity(Uri.encode(communityName)))
+                        navController.navigate(AppDestination.lemmyCommunity(communityName))
                     },
                     onMastodonMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
@@ -122,11 +193,26 @@ fun FediverseHubApp(
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
+                    onPixelfedPostSelected = { postId ->
+                        navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
+                    onLemmyPostSelected = { postId ->
+                        navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
+                    },
                     onAccountSelected = { accountId ->
-                        navController.navigate(AppDestination.searchAccountPlaceholder(accountId))
+                        navController.navigate(AppDestination.mastodonAccountDetail(accountId))
+                    },
+                    onPixelfedAccountSelected = {
+                        navController.navigate(AppDestination.pixelfedAccountDetail(it))
+                    },
+                    onLemmyCommunitySelected = { communityName ->
+                        navController.navigate(AppDestination.lemmyCommunity(communityName))
+                    },
+                    onLemmyUserSelected = {
+                        navController.navigate(AppDestination.lemmyUserDetail(it))
                     },
                     onHashtagSelected = { hashtag ->
-                        navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
+                        navController.navigate(AppDestination.mastodonHashtagTimeline(hashtag))
                     },
                 )
             }
@@ -145,10 +231,13 @@ fun FediverseHubApp(
                         navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
                     },
                     onLemmyCommunitySelected = { communityName ->
-                        navController.navigate(AppDestination.lemmyCommunity(Uri.encode(communityName)))
+                        navController.navigate(AppDestination.lemmyCommunity(communityName))
+                    },
+                    onMastodonAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.mastodonAccountDetail(accountId))
                     },
                     onHashtagSelected = { hashtag ->
-                        navController.navigate(AppDestination.searchHashtagPlaceholder(hashtag))
+                        navController.navigate(AppDestination.mastodonHashtagTimeline(hashtag))
                     },
                     onMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
@@ -163,10 +252,20 @@ fun FediverseHubApp(
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
-                    onProfileSelected = {
-                        navController.navigate(AppDestination.PROFILE) {
-                            launchSingleTop = true
+                    onProfileSelected = { accountId ->
+                        when (appState.selectedPlatform) {
+                            PlatformType.MASTODON -> navController.navigate(AppDestination.mastodonAccountDetail(accountId))
+                            PlatformType.PIXELFED -> navController.navigate(AppDestination.pixelfedAccountDetail(accountId))
+                            PlatformType.LEMMY -> navController.navigate(AppDestination.PROFILE) {
+                                launchSingleTop = true
+                            }
                         }
+                    },
+                    onPixelfedPostSelected = { postId ->
+                        navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
+                    onLemmyPostSelected = { postId ->
+                        navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
                     },
                 )
             }
@@ -211,6 +310,32 @@ fun FediverseHubApp(
                     MastodonAuthRoute(
                         oauthCallbackUri = oauthCallbackUri,
                         onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                        onLoginCompleted = {
+                            navController.navigate(AppDestination.PROFILE) {
+                                launchSingleTop = true
+                                popUpTo(AppDestination.AUTH_MASTODON) {
+                                    inclusive = true
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+            composable(AppDestination.AUTH_PIXELFED) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.padding(contentPadding),
+                ) {
+                    PixelfedAuthRoute(
+                        oauthCallbackUri = oauthCallbackUri,
+                        onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                        onLoginCompleted = {
+                            navController.navigate(AppDestination.PROFILE) {
+                                launchSingleTop = true
+                                popUpTo(AppDestination.AUTH_PIXELFED) {
+                                    inclusive = true
+                                }
+                            }
+                        },
                     )
                 }
             }
@@ -227,6 +352,9 @@ fun FediverseHubApp(
                     onBack = navController::navigateUp,
                     onMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
+                    },
+                    onAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.mastodonAccountDetail(accountId))
                     },
                     onUnauthorized = {
                         navController.navigate(AppDestination.PROFILE) {
@@ -249,6 +377,9 @@ fun FediverseHubApp(
                     onMediaSelected = { urls, altFlags, index ->
                         navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
                     },
+                    onAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.pixelfedAccountDetail(accountId))
+                    },
                     onUnauthorized = {
                         navController.navigate(AppDestination.PROFILE) {
                             launchSingleTop = true
@@ -268,7 +399,7 @@ fun FediverseHubApp(
                     contentPadding = contentPadding,
                     onBack = navController::navigateUp,
                     onCommunitySelected = { communityName ->
-                        navController.navigate(AppDestination.lemmyCommunity(Uri.encode(communityName)))
+                        navController.navigate(AppDestination.lemmyCommunity(communityName))
                     },
                     onUnauthorized = {
                         navController.navigate(AppDestination.PROFILE) {
@@ -299,39 +430,79 @@ fun FediverseHubApp(
                 )
             }
             composable(
-                route = AppDestination.SEARCH_ACCOUNT_PLACEHOLDER,
+                route = AppDestination.PIXELFED_ACCOUNT_DETAIL,
                 arguments = listOf(
                     navArgument(AppDestination.ACCOUNT_ID_ARGUMENT) {
                         type = NavType.StringType
                     },
                 ),
             ) { entry ->
-                val accountId = entry.arguments
-                    ?.getString(AppDestination.ACCOUNT_ID_ARGUMENT)
-                    ?.let(Uri::decode)
-                    .orEmpty()
-                PlaceholderRoute(
-                    title = "Account",
-                    message = "Profile detail for account $accountId will plug in here.",
+                val accountId = entry.arguments?.getString(AppDestination.ACCOUNT_ID_ARGUMENT).orEmpty()
+                PixelfedAccountProfileRoute(
+                    accountId = accountId,
+                    selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.pixelfedPostDetail(Uri.encode(postId)))
+                    },
+                    onMediaSelected = { urls, altFlags, index ->
+                        navController.navigate(AppDestination.mastodonMediaViewer(urls, altFlags, index))
+                    },
                 )
             }
             composable(
-                route = AppDestination.SEARCH_HASHTAG_PLACEHOLDER,
+                route = AppDestination.LEMMY_USER_DETAIL,
+                arguments = listOf(
+                    navArgument(AppDestination.USERNAME_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) { entry ->
+                val username = entry.arguments?.getString(AppDestination.USERNAME_ARGUMENT).orEmpty()
+                LemmyUserProfileRoute(
+                    username = username,
+                    selectedAccount = appState.selectedAccount,
+                    contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.lemmyPostDetail(Uri.encode(postId)))
+                    },
+                )
+            }
+            composable(
+                route = AppDestination.MASTODON_ACCOUNT_DETAIL,
+                arguments = listOf(
+                    navArgument(AppDestination.ACCOUNT_ID_ARGUMENT) {
+                        type = NavType.StringType
+                    },
+                ),
+            ) { entry ->
+                MastodonAccountDetailRoute(
+                    contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
+                    onAccountSelected = { accountId ->
+                        navController.navigate(AppDestination.mastodonAccountDetail(accountId))
+                    },
+                )
+            }
+            composable(
+                route = AppDestination.MASTODON_HASHTAG_TIMELINE,
                 arguments = listOf(
                     navArgument(AppDestination.HASHTAG_ARGUMENT) {
                         type = NavType.StringType
                     },
                 ),
             ) { entry ->
-                val hashtag = entry.arguments
-                    ?.getString(AppDestination.HASHTAG_ARGUMENT)
-                    ?.let(Uri::decode)
-                    .orEmpty()
-                PlaceholderRoute(
-                    title = "#$hashtag",
-                    message = "Hashtag timeline will plug into this route.",
+                MastodonHashtagTimelineRoute(
                     contentPadding = contentPadding,
+                    onBack = navController::navigateUp,
+                    onPostSelected = { postId ->
+                        navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
+                    },
                 )
             }
             composable(
@@ -379,16 +550,3 @@ private val PlatformType.accentColor
         PlatformType.LEMMY -> PlatformColors.lemmy
         PlatformType.PIXELFED -> PlatformColors.pixelfed
     }
-
-@Composable
-private fun PlaceholderRoute(
-    title: String,
-    message: String,
-    contentPadding: PaddingValues,
-) {
-    com.samiuysal.fediversehub.core.designsystem.component.EmptyState(
-        title = title,
-        message = message,
-        modifier = Modifier.padding(contentPadding),
-    )
-}

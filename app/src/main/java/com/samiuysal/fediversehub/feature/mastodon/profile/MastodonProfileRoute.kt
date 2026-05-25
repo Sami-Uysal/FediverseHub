@@ -50,8 +50,8 @@ fun MastodonProfileRoute(
                     onSettingsClick = onSettingsClick,
                 )
                 MastodonAuthRoute(
-                    oauthCallbackUri = oauthCallbackUri,
-                    onOAuthCallbackConsumed = onOAuthCallbackConsumed,
+                    oauthCallbackUri = null,
+                    onOAuthCallbackConsumed = {},
                 )
             }
         }

@@ -76,6 +76,7 @@ object MastodonCacheMapper {
         return MastodonPost(
             id = post.remoteId,
             detailId = post.statusRemoteId,
+            authorAccountId = post.authorRemoteId,
             authorDisplayName = post.authorDisplayName,
             authorUsername = post.authorUsername,
             authorAvatarUrl = post.authorAvatarUrl,

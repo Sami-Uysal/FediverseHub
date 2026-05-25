@@ -3,6 +3,9 @@ package com.samiuysal.fediversehub.feature.pixelfed.data.remote
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAccountDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonAppDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonRelationshipDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.pixelfed.data.dto.PixelfedTokenDto
 import io.ktor.client.HttpClient
@@ -76,6 +79,72 @@ class PixelfedKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun getAccount(
+        instanceUrl: String,
+        accessToken: String?,
+        accountId: String,
+    ): MastodonAccountDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/accounts/$accountId") {
+            accessToken?.takeIf(String::isNotBlank)?.let { bearerAuth(it) }
+        }.body()
+    }
+
+    override suspend fun getRelationships(
+        instanceUrl: String,
+        accessToken: String,
+        accountIds: List<String>,
+    ): List<MastodonRelationshipDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/accounts/relationships") {
+            bearerAuth(accessToken)
+            accountIds.forEach { parameter("id[]", it) }
+        }.body()
+    }
+
+    override suspend fun followAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonRelationshipDto = postAccountAction(instanceUrl, accessToken, accountId, "follow")
+
+    override suspend fun unfollowAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonRelationshipDto = postAccountAction(instanceUrl, accessToken, accountId, "unfollow")
+
+    override suspend fun search(
+        instanceUrl: String,
+        accessToken: String?,
+        query: String,
+        type: String,
+        limit: Int,
+    ): MastodonSearchDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v2/search") {
+            accessToken?.takeIf(String::isNotBlank)?.let { bearerAuth(it) }
+            parameter("_pe", 1)
+            parameter("q", query)
+            parameter("type", type)
+            parameter("limit", limit)
+        }.body()
+    }
+
+    override suspend fun getNotifications(
+        instanceUrl: String,
+        accessToken: String,
+        maxId: String?,
+        limit: Int,
+    ): List<MastodonNotificationDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/notifications") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
+            maxId?.let { parameter("max_id", it) }
+        }.body()
+    }
+
     override suspend fun getHomeFeed(
         instanceUrl: String,
         accessToken: String,
@@ -108,7 +177,7 @@ class PixelfedKtorApi @Inject constructor(
 
     override suspend fun getAccountStatuses(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         accountId: String,
         maxId: String?,
         limit: Int,
@@ -116,7 +185,7 @@ class PixelfedKtorApi @Inject constructor(
     ): List<MastodonStatusDto> {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v1/accounts/$accountId/statuses") {
-            bearerAuth(accessToken)
+            accessToken?.takeIf(String::isNotBlank)?.let { bearerAuth(it) }
             parameter("limit", limit)
             parameter("only_media", onlyMedia)
             maxId?.let { parameter("max_id", it) }
@@ -185,6 +254,18 @@ class PixelfedKtorApi @Inject constructor(
     ): MastodonStatusDto {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.post("$baseUrl/api/v1/statuses/$statusId/$action") {
+            bearerAuth(accessToken)
+        }.body()
+    }
+
+    private suspend fun postAccountAction(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+        action: String,
+    ): MastodonRelationshipDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v1/accounts/$accountId/$action") {
             bearerAuth(accessToken)
         }.body()
     }

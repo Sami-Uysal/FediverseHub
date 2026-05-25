@@ -79,6 +79,7 @@ fun AppPostCard(
     actions: List<AppPostAction>,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onAuthorClick: (() -> Unit)? = null,
     onMediaClick: (Int) -> Unit = {},
     onMoreClick: () -> Unit = {},
 ) {
@@ -138,6 +139,7 @@ fun AppPostCard(
                     showThreadLineBottom = threadLineBottom,
                     showThreadMarker = hasThreadConnection,
                     modifier = Modifier.fillMaxHeight(),
+                    onAuthorClick = onAuthorClick,
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -146,7 +148,15 @@ fun AppPostCard(
                     ) {
                         Text(
                             text = displayName,
-                            modifier = Modifier.weight(0.44f, fill = false),
+                            modifier = Modifier
+                                .weight(0.44f, fill = false)
+                                .then(
+                                    if (onAuthorClick != null) {
+                                        Modifier.clickable(onClick = onAuthorClick)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -251,6 +261,7 @@ private fun ThreadAvatarColumn(
     showThreadLineBottom: Boolean,
     showThreadMarker: Boolean,
     modifier: Modifier = Modifier,
+    onAuthorClick: (() -> Unit)? = null,
 ) {
     Box(
         modifier = modifier.width(42.dp),
@@ -275,7 +286,15 @@ private fun ThreadAvatarColumn(
             imageUrl = avatarUrl,
             name = displayName,
             size = 42.dp,
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .then(
+                    if (onAuthorClick != null) {
+                        Modifier.clickable(onClick = onAuthorClick)
+                    } else {
+                        Modifier
+                    },
+                ),
         )
         if (showThreadMarker) {
             Box(

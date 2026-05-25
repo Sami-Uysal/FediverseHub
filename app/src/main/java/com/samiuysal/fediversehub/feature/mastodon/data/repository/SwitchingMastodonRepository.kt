@@ -8,6 +8,7 @@ import com.samiuysal.fediversehub.di.RealMastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRelationship
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchResult
@@ -36,10 +37,34 @@ class SwitchingMastodonRepository @Inject constructor(
         filter: MastodonProfileTimelineFilter,
     ) = account.repository().getAccountStatusesPagingData(account, accountId, filter)
 
+    override fun getHashtagTimelinePagingData(
+        account: Account,
+        hashtag: String,
+    ) = account.repository().getHashtagTimelinePagingData(account, hashtag)
+
     override suspend fun getOwnProfile(
         account: Account,
     ): AppResult<MastodonProfile> =
         account.repository().getOwnProfile(account)
+
+    override suspend fun getProfile(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonProfile> =
+        account.repository().getProfile(account, accountId)
+
+    override suspend fun getRelationship(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonRelationship> =
+        account.repository().getRelationship(account, accountId)
+
+    override suspend fun setFollowing(
+        account: Account,
+        accountId: String,
+        following: Boolean,
+    ): AppResult<MastodonRelationship> =
+        account.repository().setFollowing(account, accountId, following)
 
     override suspend fun search(
         account: Account,
@@ -49,13 +74,13 @@ class SwitchingMastodonRepository @Inject constructor(
         account.repository().search(account, query, category)
 
     override suspend fun getTrendingStatuses(account: Account) =
-        account.repository().getTrendingStatuses(account)
+        account.exploreRepository().getTrendingStatuses(account)
 
     override suspend fun getTrendingTags(account: Account) =
-        account.repository().getTrendingTags(account)
+        account.exploreRepository().getTrendingTags(account)
 
     override suspend fun getTrendingLinks(account: Account) =
-        account.repository().getTrendingLinks(account)
+        account.exploreRepository().getTrendingLinks(account)
 
     override suspend fun getHomeTimeline(
         account: Account,
@@ -107,4 +132,7 @@ class SwitchingMastodonRepository @Inject constructor(
 
     private fun Account.repository(): MastodonRepository =
         if (accessToken.isNullOrBlank()) mockRepository else realRepository
+
+    private fun Account.exploreRepository(): MastodonRepository =
+        if (id.startsWith("public-mastodon-")) realRepository else repository()
 }

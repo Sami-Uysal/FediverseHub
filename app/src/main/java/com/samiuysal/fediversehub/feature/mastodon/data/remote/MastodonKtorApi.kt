@@ -6,6 +6,7 @@ import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonContextDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonHashtagDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonNotificationDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonPreviewCardDto
+import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonRelationshipDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonSearchDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonStatusDto
 import com.samiuysal.fediversehub.feature.mastodon.data.dto.MastodonTokenDto
@@ -81,6 +82,41 @@ class MastodonKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun getAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonAccountDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/accounts/$accountId") {
+            bearerAuth(accessToken)
+        }.body()
+    }
+
+    override suspend fun getRelationships(
+        instanceUrl: String,
+        accessToken: String,
+        accountIds: List<String>,
+    ): List<MastodonRelationshipDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/accounts/relationships") {
+            bearerAuth(accessToken)
+            accountIds.forEach { parameter("id[]", it) }
+        }.body()
+    }
+
+    override suspend fun followAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonRelationshipDto = postAccountAction(instanceUrl, accessToken, accountId, "follow")
+
+    override suspend fun unfollowAccount(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+    ): MastodonRelationshipDto = postAccountAction(instanceUrl, accessToken, accountId, "unfollow")
+
     override suspend fun getHomeTimeline(
         instanceUrl: String,
         accessToken: String,
@@ -151,6 +187,21 @@ class MastodonKtorApi @Inject constructor(
         }.body()
     }
 
+    override suspend fun getHashtagTimeline(
+        instanceUrl: String,
+        accessToken: String,
+        hashtag: String,
+        maxId: String?,
+        limit: Int,
+    ): List<MastodonStatusDto> {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.get("$baseUrl/api/v1/timelines/tag/$hashtag") {
+            bearerAuth(accessToken)
+            parameter("limit", limit)
+            maxId?.let { parameter("max_id", it) }
+        }.body()
+    }
+
     override suspend fun search(
         instanceUrl: String,
         accessToken: String,
@@ -170,36 +221,36 @@ class MastodonKtorApi @Inject constructor(
 
     override suspend fun getTrendingStatuses(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         limit: Int,
     ): List<MastodonStatusDto> {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v1/trends/statuses") {
-            bearerAuth(accessToken)
+            accessToken?.takeIf(String::isNotBlank)?.let { bearerAuth(it) }
             parameter("limit", limit)
         }.body()
     }
 
     override suspend fun getTrendingTags(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         limit: Int,
     ): List<MastodonHashtagDto> {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v1/trends/tags") {
-            bearerAuth(accessToken)
+            accessToken?.takeIf(String::isNotBlank)?.let { bearerAuth(it) }
             parameter("limit", limit)
         }.body()
     }
 
     override suspend fun getTrendingLinks(
         instanceUrl: String,
-        accessToken: String,
+        accessToken: String?,
         limit: Int,
     ): List<MastodonPreviewCardDto> {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v1/trends/links") {
-            bearerAuth(accessToken)
+            accessToken?.takeIf(String::isNotBlank)?.let { bearerAuth(it) }
             parameter("limit", limit)
         }.body()
     }
@@ -294,6 +345,18 @@ class MastodonKtorApi @Inject constructor(
     ): MastodonStatusDto {
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.post("$baseUrl/api/v1/statuses/$statusId/$action") {
+            bearerAuth(accessToken)
+        }.body()
+    }
+
+    private suspend fun postAccountAction(
+        instanceUrl: String,
+        accessToken: String,
+        accountId: String,
+        action: String,
+    ): MastodonRelationshipDto {
+        val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
+        return httpClient.post("$baseUrl/api/v1/accounts/$accountId/$action") {
             bearerAuth(accessToken)
         }.body()
     }

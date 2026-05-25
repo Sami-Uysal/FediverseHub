@@ -80,6 +80,7 @@ fun PixelfedHomeScreen(
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     onPostClick: (String) -> Unit,
+    onAuthorClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
     onLikeClick: (PixelfedPostUiModel) -> Unit,
     onCommentsClick: (PixelfedPostUiModel) -> Unit,
@@ -142,6 +143,7 @@ fun PixelfedHomeScreen(
                     PixelfedPostCard(
                         post = visiblePost,
                         onClick = { onPostClick(visiblePost.id) },
+                        onAuthorClick = { onAuthorClick(visiblePost.authorAccountId) },
                         onMediaClick = onMediaClick,
                         onLikeClick = onLikeClick,
                         onCommentsClick = onCommentsClick,
@@ -169,6 +171,7 @@ fun PixelfedHomeScreenContent(
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     onPostClick: (String) -> Unit = {},
+    onAuthorClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
     onLikeClick: (PixelfedPostUiModel) -> Unit = {},
     onCommentsClick: (PixelfedPostUiModel) -> Unit = {},
@@ -188,6 +191,7 @@ fun PixelfedHomeScreenContent(
                 PixelfedPostCard(
                     post = post,
                     onClick = { onPostClick(post.id) },
+                    onAuthorClick = { onAuthorClick(post.authorAccountId) },
                     onMediaClick = onMediaClick,
                     onLikeClick = onLikeClick,
                     onCommentsClick = onCommentsClick,
@@ -201,6 +205,7 @@ fun PixelfedHomeScreenContent(
 private fun PixelfedPostCard(
     post: PixelfedPostUiModel,
     onClick: () -> Unit,
+    onAuthorClick: () -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
     onLikeClick: (PixelfedPostUiModel) -> Unit,
     onCommentsClick: (PixelfedPostUiModel) -> Unit,
@@ -223,8 +228,13 @@ private fun PixelfedPostCard(
                 imageUrl = post.avatarUrl,
                 name = post.displayName,
                 size = 38.dp,
+                modifier = Modifier.clickable(onClick = onAuthorClick),
             )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onAuthorClick),
+            ) {
                 Text(
                     text = post.displayName,
                     style = MaterialTheme.typography.titleMedium,

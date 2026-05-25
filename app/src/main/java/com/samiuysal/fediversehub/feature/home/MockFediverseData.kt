@@ -46,6 +46,7 @@ object MockFediverseData {
         pixelfedPosts = listOf(
             PixelfedPostUiModel(
                 id = "p1",
+                authorAccountId = "pixelfed-author-1",
                 displayName = "Leyla Street",
                 username = "@leyla@pixelfed.social",
                 avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop",
@@ -57,6 +58,7 @@ object MockFediverseData {
             ),
             PixelfedPostUiModel(
                 id = "p2",
+                authorAccountId = "pixelfed-author-2",
                 displayName = "Minimal Frames",
                 username = "@frames@pixelfed.art",
                 avatarUrl = null,
@@ -68,6 +70,7 @@ object MockFediverseData {
             ),
             PixelfedPostUiModel(
                 id = "p3",
+                authorAccountId = "pixelfed-author-3",
                 displayName = "Aegean Notes",
                 username = "@aegean@pixelfed.social",
                 avatarUrl = "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=96&h=96&fit=crop",

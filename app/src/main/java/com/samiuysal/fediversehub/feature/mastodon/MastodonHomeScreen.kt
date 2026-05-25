@@ -68,6 +68,7 @@ fun MastodonHomeScreen(
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     onPostClick: (String) -> Unit = {},
+    onAuthorClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit = { _, _ -> },
 ) {
@@ -107,6 +108,7 @@ fun MastodonHomeScreen(
                 posts = posts,
                 actionOverrides = actionOverrides,
                 onPostClick = onPostClick,
+                onAuthorClick = onAuthorClick,
                 onMediaClick = onMediaClick,
                 onPostAction = onPostAction,
             )
@@ -126,6 +128,7 @@ fun MastodonHomeScreenContent(
     onRefresh: () -> Unit = {},
     showTopBar: Boolean = true,
     onPostClick: (String) -> Unit = {},
+    onAuthorClick: (String) -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit = { _, _ -> },
 ) {
@@ -150,6 +153,7 @@ fun MastodonHomeScreenContent(
                 posts = posts,
                 actionOverrides = actionOverrides,
                 onPostClick = onPostClick,
+                onAuthorClick = onAuthorClick,
                 onMediaClick = onMediaClick,
                 onPostAction = onPostAction,
             )
@@ -189,6 +193,7 @@ private fun MastodonTimelineList(
     posts: List<MastodonPostUiModel>,
     actionOverrides: Map<String, MastodonPostUiModel>,
     onPostClick: (String) -> Unit,
+    onAuthorClick: (String) -> Unit,
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
 ) {
@@ -211,6 +216,7 @@ private fun MastodonTimelineList(
             MastodonTimelinePost(
                 post = renderedPost,
                 onClick = { onPostClick(renderedPost.detailId) },
+                onAuthorClick = { onAuthorClick(renderedPost.authorAccountId) },
                 onMediaClick = onMediaClick,
                 onPostAction = onPostAction,
             )
@@ -223,6 +229,7 @@ private fun MastodonTimelineList(
     posts: LazyPagingItems<MastodonPostUiModel>,
     actionOverrides: Map<String, MastodonPostUiModel>,
     onPostClick: (String) -> Unit,
+    onAuthorClick: (String) -> Unit,
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit,
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
 ) {
@@ -249,6 +256,7 @@ private fun MastodonTimelineList(
                 MastodonTimelinePost(
                     post = renderedPost,
                     onClick = { onPostClick(renderedPost.detailId) },
+                    onAuthorClick = { onAuthorClick(renderedPost.authorAccountId) },
                     onMediaClick = onMediaClick,
                     onPostAction = onPostAction,
                 )
@@ -278,6 +286,7 @@ private fun MastodonTimelineList(
 private fun MastodonTimelinePost(
     post: MastodonPostUiModel,
     onClick: () -> Unit = {},
+    onAuthorClick: () -> Unit = {},
     onMediaClick: (List<String>, List<Boolean>, Int) -> Unit = { _, _, _ -> },
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit = { _, _ -> },
 ) {
@@ -368,6 +377,7 @@ private fun MastodonTimelinePost(
         linkPreview = linkPreview,
         actions = actions,
         onClick = onClick,
+        onAuthorClick = onAuthorClick,
         onMediaClick = { index ->
             if (mediaUrls.isNotEmpty()) {
                 onMediaClick(mediaUrls, mediaHasAlt, index.coerceIn(mediaUrls.indices))

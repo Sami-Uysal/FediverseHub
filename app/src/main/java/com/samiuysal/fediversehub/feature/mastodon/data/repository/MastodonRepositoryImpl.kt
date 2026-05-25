@@ -5,21 +5,27 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import com.samiuysal.fediversehub.core.cache.FediverseMemoryCache
 import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.database.AppDatabase
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.core.network.NetworkErrorMapper
+import com.samiuysal.fediversehub.core.performance.FeedLoadPolicy
+import com.samiuysal.fediversehub.core.performance.FeedSurface
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonCacheMapper
 import com.samiuysal.fediversehub.feature.mastodon.data.local.MastodonTimelineDao
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonAccountStatusesPagingSource
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonApi
+import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonHashtagTimelinePagingSource
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonNotificationsPagingSource
 import com.samiuysal.fediversehub.feature.mastodon.data.remote.MastodonTimelineRemoteMediator
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotification
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPost
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonPostDetail
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfile
+import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRelationship
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonProfileTimelineFilter
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonRepository
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonSearchCategory
@@ -31,21 +37,25 @@ import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonProfileMapper
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonSearchMapper
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonTimelineMapper
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalPagingApi::class)
 class MastodonRepositoryImpl @Inject constructor(
     private val mastodonApi: MastodonApi,
     private val database: AppDatabase,
     private val mastodonTimelineDao: MastodonTimelineDao,
+    private val feedLoadPolicy: FeedLoadPolicy,
+    private val memoryCache: FediverseMemoryCache,
 ) : MastodonRepository {
     override fun getHomeTimelinePagingData(
         account: Account,
     ): Flow<PagingData<MastodonPost>> = Pager(
         config = PagingConfig(
-            pageSize = MastodonTimelinePage.DEFAULT_LIMIT,
-            initialLoadSize = MastodonTimelinePage.DEFAULT_LIMIT,
+            pageSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.HOME),
+            initialLoadSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.HOME),
             enablePlaceholders = false,
         ),
         remoteMediator = MastodonTimelineRemoteMediator(
@@ -68,8 +78,8 @@ class MastodonRepositoryImpl @Inject constructor(
         val accessToken = account.accessToken.orEmpty()
         return Pager(
             config = PagingConfig(
-                pageSize = 30,
-                initialLoadSize = 30,
+            pageSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.HOME),
+            initialLoadSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.HOME),
                 enablePlaceholders = false,
             ),
             pagingSourceFactory = {
@@ -90,8 +100,8 @@ class MastodonRepositoryImpl @Inject constructor(
         val accessToken = account.accessToken.orEmpty()
         return Pager(
             config = PagingConfig(
-                pageSize = 30,
-                initialLoadSize = 30,
+                pageSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.PROFILE),
+                initialLoadSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.PROFILE),
                 enablePlaceholders = false,
             ),
             pagingSourceFactory = {
@@ -106,6 +116,30 @@ class MastodonRepositoryImpl @Inject constructor(
         ).flow
     }
 
+    override fun getHashtagTimelinePagingData(
+        account: Account,
+        hashtag: String,
+    ): Flow<PagingData<MastodonPost>> {
+        val accessToken = account.accessToken.orEmpty()
+        val pageSize = feedLoadPolicy.pageSize(PlatformType.MASTODON, FeedSurface.EXPLORE)
+        return Pager(
+            config = PagingConfig(
+                pageSize = pageSize,
+                initialLoadSize = pageSize,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = {
+                MastodonHashtagTimelinePagingSource(
+                    instanceUrl = account.instanceUrl,
+                    accessToken = accessToken,
+                    hashtag = hashtag,
+                    limit = pageSize,
+                    mastodonApi = mastodonApi,
+                )
+            },
+        ).flow
+    }
+
     override suspend fun getOwnProfile(
         account: Account,
     ): AppResult<MastodonProfile> {
@@ -113,11 +147,99 @@ class MastodonRepositoryImpl @Inject constructor(
             ?: return AppResult.Failure(AppError.Unauthorized)
 
         return try {
-            val profile = mastodonApi.verifyCredentials(
-                instanceUrl = account.instanceUrl,
-                accessToken = accessToken,
+            AppResult.Success(
+                memoryCache.getOrPut(account.cacheKey("own-profile")) {
+                    val profile = mastodonApi.verifyCredentials(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = accessToken,
+                    )
+                    withContext(Dispatchers.Default) {
+                        MastodonProfileMapper.dtoToDomain(profile)
+                    }
+                },
             )
-            AppResult.Success(MastodonProfileMapper.dtoToDomain(profile))
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getProfile(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonProfile> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            AppResult.Success(
+                memoryCache.getOrPut(account.cacheKey("profile", accountId)) {
+                    val profile = mastodonApi.getAccount(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = accessToken,
+                        accountId = accountId,
+                    )
+                    withContext(Dispatchers.Default) {
+                        MastodonProfileMapper.dtoToDomain(profile)
+                    }
+                },
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun getRelationship(
+        account: Account,
+        accountId: String,
+    ): AppResult<MastodonRelationship> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            AppResult.Success(
+                memoryCache.getOrPut(
+                    key = account.cacheKey("relationship", accountId),
+                    ttlMillis = FediverseMemoryCache.SHORT_TTL_MILLIS,
+                ) {
+                    mastodonApi.getRelationships(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = accessToken,
+                        accountIds = listOf(accountId),
+                    ).firstOrNull()?.let {
+                        MastodonRelationship(
+                            accountId = it.id,
+                            following = it.following,
+                            requested = it.requested,
+                        )
+                    } ?: MastodonRelationship(accountId = accountId, following = false, requested = false)
+                },
+            )
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
+    override suspend fun setFollowing(
+        account: Account,
+        accountId: String,
+        following: Boolean,
+    ): AppResult<MastodonRelationship> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val dto = if (following) {
+                mastodonApi.followAccount(account.instanceUrl, accessToken, accountId)
+            } else {
+                mastodonApi.unfollowAccount(account.instanceUrl, accessToken, accountId)
+            }
+            val relationship = MastodonRelationship(
+                accountId = dto.id,
+                following = dto.following,
+                requested = dto.requested,
+            )
+            memoryCache.put(account.cacheKey("relationship", accountId), relationship)
+            AppResult.Success(relationship)
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }
@@ -145,15 +267,17 @@ class MastodonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTrendingStatuses(account: Account): AppResult<List<MastodonPost>> {
-        val accessToken = account.accessToken
-            ?: return AppResult.Failure(AppError.Unauthorized)
-
         return try {
             AppResult.Success(
-                mastodonApi.getTrendingStatuses(
-                    instanceUrl = account.instanceUrl,
-                    accessToken = accessToken,
-                ).map(MastodonTimelineMapper::dtoToDomain),
+                memoryCache.getOrPut(account.cacheKey("trends-statuses")) {
+                    val statuses = mastodonApi.getTrendingStatuses(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = account.accessToken,
+                    )
+                    withContext(Dispatchers.Default) {
+                        statuses.map(MastodonTimelineMapper::dtoToDomain)
+                    }
+                },
             )
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
@@ -161,15 +285,14 @@ class MastodonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTrendingTags(account: Account): AppResult<List<MastodonHashtag>> {
-        val accessToken = account.accessToken
-            ?: return AppResult.Failure(AppError.Unauthorized)
-
         return try {
             AppResult.Success(
-                mastodonApi.getTrendingTags(
-                    instanceUrl = account.instanceUrl,
-                    accessToken = accessToken,
-                ).map { MastodonHashtag(name = it.name, url = it.url) },
+                memoryCache.getOrPut(account.cacheKey("trends-tags")) {
+                    mastodonApi.getTrendingTags(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = account.accessToken,
+                    ).map { MastodonHashtag(name = it.name, url = it.url) }
+                },
             )
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
@@ -177,23 +300,22 @@ class MastodonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTrendingLinks(account: Account): AppResult<List<MastodonTrendLink>> {
-        val accessToken = account.accessToken
-            ?: return AppResult.Failure(AppError.Unauthorized)
-
         return try {
             AppResult.Success(
-                mastodonApi.getTrendingLinks(
-                    instanceUrl = account.instanceUrl,
-                    accessToken = accessToken,
-                ).map {
-                    MastodonTrendLink(
-                        url = it.url.orEmpty(),
-                        title = it.title,
-                        description = it.description,
-                        imageUrl = it.image,
-                        providerName = it.providerName,
-                    )
-                }.filter { it.url.isNotBlank() },
+                memoryCache.getOrPut(account.cacheKey("trends-links")) {
+                    mastodonApi.getTrendingLinks(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = account.accessToken,
+                    ).map {
+                        MastodonTrendLink(
+                            url = it.url.orEmpty(),
+                            title = it.title,
+                            description = it.description,
+                            imageUrl = it.image,
+                            providerName = it.providerName,
+                        )
+                    }.filter { it.url.isNotBlank() }
+                },
             )
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
@@ -227,22 +349,26 @@ class MastodonRepositoryImpl @Inject constructor(
             ?: return AppResult.Failure(AppError.Unauthorized)
 
         return try {
-            val post = mastodonApi.getStatus(
-                instanceUrl = account.instanceUrl,
-                accessToken = accessToken,
-                statusId = postId,
-            )
-            val context = mastodonApi.getStatusContext(
-                instanceUrl = account.instanceUrl,
-                accessToken = accessToken,
-                statusId = postId,
-            )
             AppResult.Success(
-                MastodonPostDetail(
-                    post = MastodonTimelineMapper.dtoToDomain(post),
-                    ancestors = context.ancestors.map(MastodonTimelineMapper::dtoToDomain),
-                    descendants = context.descendants.map(MastodonTimelineMapper::dtoToDomain),
-                ),
+                memoryCache.getOrPut(account.cacheKey("post-detail", postId)) {
+                    val post = mastodonApi.getStatus(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = accessToken,
+                        statusId = postId,
+                    )
+                    val context = mastodonApi.getStatusContext(
+                        instanceUrl = account.instanceUrl,
+                        accessToken = accessToken,
+                        statusId = postId,
+                    )
+                    withContext(Dispatchers.Default) {
+                        MastodonPostDetail(
+                            post = MastodonTimelineMapper.dtoToDomain(post),
+                            ancestors = context.ancestors.map(MastodonTimelineMapper::dtoToDomain),
+                            descendants = context.descendants.map(MastodonTimelineMapper::dtoToDomain),
+                        )
+                    }
+                },
             )
         } catch (throwable: Throwable) {
             AppResult.Failure(NetworkErrorMapper.map(throwable))
@@ -352,6 +478,7 @@ class MastodonRepositoryImpl @Inject constructor(
         return try {
             val dto = action(accessToken)
             val post = MastodonTimelineMapper.dtoToDomain(dto)
+            memoryCache.put(account.cacheKey("post", postId), post)
             mastodonTimelineDao.updateStatusActions(
                 accountId = account.id,
                 statusId = postId,
@@ -367,4 +494,16 @@ class MastodonRepositoryImpl @Inject constructor(
             AppResult.Failure(NetworkErrorMapper.map(throwable))
         }
     }
+
+    private fun Account.cacheKey(type: String, id: String = "self"): String =
+        "mastodon:${instanceUrl.normalizedInstance()}:${cacheOwnerKey()}:$type:$id"
+
+    private fun Account.cacheOwnerKey(): String =
+        if (accessToken.isNullOrBlank()) "public" else id
+
+    private fun String.normalizedInstance(): String =
+        removePrefix("https://")
+            .removePrefix("http://")
+            .trimEnd('/')
+            .lowercase()
 }

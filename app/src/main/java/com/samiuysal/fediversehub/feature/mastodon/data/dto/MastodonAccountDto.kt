@@ -26,3 +26,13 @@ data class MastodonAccountFieldDto(
     val name: String,
     val value: String,
 )
+
+@Serializable
+data class MastodonRelationshipDto(
+    val id: String,
+    val following: Boolean = false,
+    @SerialName("followed_by") val followedBy: Boolean = false,
+    val blocking: Boolean = false,
+    val muting: Boolean = false,
+    val requested: Boolean = false,
+)

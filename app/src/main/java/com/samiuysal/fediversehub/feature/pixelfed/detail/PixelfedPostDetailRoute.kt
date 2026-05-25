@@ -14,6 +14,7 @@ fun PixelfedPostDetailRoute(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     onUnauthorized: () -> Unit,
     viewModel: PixelfedPostDetailViewModel = hiltViewModel(),
 ) {
@@ -36,6 +37,7 @@ fun PixelfedPostDetailRoute(
         onCommentDraftChange = viewModel::onCommentDraftChange,
         onSubmitComment = viewModel::submitComment,
         onMediaSelected = onMediaSelected,
+        onAccountSelected = onAccountSelected,
         modifier = Modifier.padding(contentPadding),
     )
 }

@@ -51,6 +51,7 @@ fun MastodonPostDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,6 +75,7 @@ fun MastodonPostDetailScreen(
             is MastodonPostDetailUiState.Success -> MastodonPostDetailContent(
                 uiState = uiState,
                 onMediaSelected = onMediaSelected,
+                onAccountSelected = onAccountSelected,
                 onPostAction = onPostAction,
                 modifier = Modifier.weight(1f),
             )
@@ -125,6 +127,7 @@ private fun MastodonPostDetailTopBar(
 private fun MastodonPostDetailContent(
     uiState: MastodonPostDetailUiState.Success,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -160,6 +163,7 @@ private fun MastodonPostDetailContent(
                 threadLineBottom = index < threadItems.lastIndex,
                 replyTarget = item.replyTarget(threadItems, index),
                 onMediaSelected = onMediaSelected,
+                onAccountSelected = onAccountSelected,
                 onPostAction = onPostAction,
             )
         }
@@ -173,6 +177,7 @@ private fun MastodonDetailPostCard(
     threadLineBottom: Boolean,
     replyTarget: String?,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
+    onAccountSelected: (String) -> Unit,
     onPostAction: (MastodonPostUiModel, MastodonPostActionType) -> Unit,
 ) {
     val post = item.post
@@ -270,6 +275,7 @@ private fun MastodonDetailPostCard(
         isThreadFocused = item.type == ThreadItemType.Selected,
         linkPreview = linkPreview,
         actions = actions,
+        onAuthorClick = { onAccountSelected(post.authorAccountId) },
         onMediaClick = { index ->
             if (mediaUrls.isNotEmpty()) {
                 onMediaSelected(mediaUrls, mediaHasAlt, index.coerceIn(mediaUrls.indices))
@@ -327,6 +333,7 @@ fun MastodonPostDetailScreenPreview() {
             onBack = {},
             onRetry = {},
             onMediaSelected = { _, _, _ -> },
+            onAccountSelected = {},
             onPostAction = { _, _ -> },
         )
     }

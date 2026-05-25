@@ -8,6 +8,7 @@ import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotificationTy
 data class MastodonNotificationUiModel(
     val id: String,
     val type: MastodonNotificationType,
+    val actorAccountId: String,
     val actorDisplayName: String,
     val actorUsername: String,
     val actorAvatarUrl: String?,

@@ -11,6 +11,7 @@ object MockMastodonData {
     val homeTimeline = listOf(
         MastodonPost(
             id = "m1",
+            authorAccountId = "mock-account-nora",
             authorDisplayName = "Nora Dev",
             authorUsername = "nora@hachyderm.io",
             authorAvatarUrl = "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=96&h=96&fit=crop",
@@ -31,6 +32,7 @@ object MockMastodonData {
         ),
         MastodonPost(
             id = "m2",
+            authorAccountId = "mock-account-labs",
             authorDisplayName = "Moshidon Labs",
             authorUsername = "labs@fosstodon.org",
             authorAvatarUrl = null,
@@ -54,6 +56,7 @@ object MockMastodonData {
         ),
         MastodonPost(
             id = "m3",
+            authorAccountId = "mock-account-android",
             authorDisplayName = "Android Weekly",
             authorUsername = "androidweekly@mastodon.social",
             authorAvatarUrl = "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=96&h=96&fit=crop",
@@ -78,6 +81,7 @@ object MockMastodonData {
             id = "n1",
             type = MastodonNotificationType.MENTION,
             createdAt = null,
+            accountId = "mock-account-nora",
             accountDisplayName = "Nora Dev",
             accountUsername = "nora@hachyderm.io",
             accountAvatarUrl = "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=96&h=96&fit=crop",
@@ -87,6 +91,7 @@ object MockMastodonData {
             id = "n2",
             type = MastodonNotificationType.FAVOURITE,
             createdAt = null,
+            accountId = "mock-account-labs",
             accountDisplayName = "Moshidon Labs",
             accountUsername = "labs@fosstodon.org",
             accountAvatarUrl = null,
@@ -96,6 +101,7 @@ object MockMastodonData {
             id = "n3",
             type = MastodonNotificationType.REBLOG,
             createdAt = null,
+            accountId = "mock-account-android",
             accountDisplayName = "Android Weekly",
             accountUsername = "androidweekly@mastodon.social",
             accountAvatarUrl = "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=96&h=96&fit=crop",
@@ -105,6 +111,7 @@ object MockMastodonData {
             id = "n4",
             type = MastodonNotificationType.FOLLOW,
             createdAt = null,
+            accountId = "mock-account-design",
             accountDisplayName = "Fediverse Design",
             accountUsername = "design@mastodon.social",
             accountAvatarUrl = null,

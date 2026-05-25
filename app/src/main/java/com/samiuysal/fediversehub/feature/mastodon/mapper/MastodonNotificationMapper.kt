@@ -15,6 +15,7 @@ object MastodonNotificationMapper {
             id = dto.id,
             type = dto.type.toNotificationType(),
             createdAt = dto.createdAt,
+            accountId = dto.account.id,
             accountDisplayName = htmlToPlainText(
                 dto.account.displayName.ifBlank { dto.account.username },
             ),
@@ -27,6 +28,7 @@ object MastodonNotificationMapper {
         MastodonNotificationUiModel(
             id = domain.id,
             type = domain.type,
+            actorAccountId = domain.accountId,
             actorDisplayName = domain.accountDisplayName,
             actorUsername = "@${domain.accountUsername}",
             actorAvatarUrl = domain.accountAvatarUrl,
