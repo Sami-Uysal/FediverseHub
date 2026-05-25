@@ -11,6 +11,7 @@ import com.samiuysal.fediversehub.core.common.error.AppError
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.core.performance.PerfLogger
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostActionType
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
@@ -94,6 +95,7 @@ class HomeViewModel @Inject constructor(
                 if (account == null) {
                     flowOf(PagingData.empty())
                 } else {
+                    PerfLogger.log("mastodon_home_paging_start", account.instanceUrl)
                     mastodonRepository
                         .getHomeTimelinePagingData(account = account)
                         .map { pagingData ->
@@ -114,6 +116,7 @@ class HomeViewModel @Inject constructor(
                 if (account == null) {
                     flowOf(PagingData.empty())
                 } else {
+                    PerfLogger.log("lemmy_home_paging_start", account.instanceUrl)
                     lemmyRepository
                         .getPostsPagingData(
                             account = account,
@@ -141,6 +144,7 @@ class HomeViewModel @Inject constructor(
                     debugLog(
                         "Pixelfed home loading: account=${account.id}, instance=${account.instanceUrl}, token=true",
                     )
+                    PerfLogger.log("pixelfed_home_paging_start", account.instanceUrl)
                     pixelfedRepository
                         .getHomeFeedPagingData(account)
                         .map { pagingData -> pagingData.map(PixelfedMapper::postToUi) }
@@ -154,11 +158,21 @@ class HomeViewModel @Inject constructor(
             storedAccounts to activeAccountIds
         }
             .onEach { (storedAccounts, activeAccountIds) ->
-                _uiState.update { state ->
-                    state.copy(
-                        accounts = storedAccounts,
-                        activeAccountIds = activeAccountIds,
-                    )
+                val previousState = _uiState.value
+                val validActiveIds = activeAccountIds.filter { (platform, activeId) ->
+                    storedAccounts.any { it.platform == platform && it.id == activeId }
+                }
+                val nextState = previousState.copy(
+                    accounts = storedAccounts,
+                    activeAccountIds = validActiveIds,
+                )
+                PlatformType.entries.forEach { platform ->
+                    if (previousState.activeAccount(platform)?.id != nextState.activeAccount(platform)?.id) {
+                        clearPlatformTransientState(platform)
+                    }
+                }
+                _uiState.update {
+                    nextState
                 }
             }
             .launchIn(viewModelScope)
@@ -210,7 +224,7 @@ class HomeViewModel @Inject constructor(
                 is AppResult.Failure -> {
                     setMastodonOverride(before.copy(loadingAction = null))
                     if (result.error is AppError.Unauthorized) {
-                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                        _effects.emit(HomeEffect.NavigateToProfile)
                     }
                 }
             }
@@ -262,7 +276,7 @@ class HomeViewModel @Inject constructor(
                         errorMessage = result.error.replyErrorMessage(),
                     )
                     if (result.error is AppError.Unauthorized) {
-                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                        _effects.emit(HomeEffect.NavigateToProfile)
                     }
                 }
             }
@@ -332,7 +346,7 @@ class HomeViewModel @Inject constructor(
                         errorMessage = result.error.postErrorMessage(),
                     )
                     if (result.error is AppError.Unauthorized) {
-                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                        _effects.emit(HomeEffect.NavigateToProfile)
                     }
                 }
             }
@@ -345,6 +359,10 @@ class HomeViewModel @Inject constructor(
 
     fun selectAccount(account: Account?) {
         if (account == null) return
+        val previousAccountId = _uiState.value.activeAccountIds[account.platform]
+        if (previousAccountId != null && previousAccountId != account.id) {
+            clearPlatformTransientState(account.platform)
+        }
         _uiState.update {
             it.copy(activeAccountIds = it.activeAccountIds + (account.platform to account.id))
         }
@@ -384,7 +402,7 @@ class HomeViewModel @Inject constructor(
                 is AppResult.Failure -> {
                     setLemmyOverride(before.copy(loadingAction = null))
                     if (result.error is AppError.Unauthorized) {
-                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                        _effects.emit(HomeEffect.NavigateToProfile)
                     }
                 }
             }
@@ -417,7 +435,7 @@ class HomeViewModel @Inject constructor(
                 is AppResult.Failure -> {
                     setPixelfedOverride(before.copy(isLoadingLike = false))
                     if (result.error is AppError.Unauthorized) {
-                        _effects.emit(HomeEffect.NavigateToMastodonLogin)
+                        _effects.emit(HomeEffect.NavigateToProfile)
                     }
                 }
             }
@@ -458,19 +476,43 @@ class HomeViewModel @Inject constructor(
 
     private fun setMastodonOverride(post: MastodonPostUiModel) {
         _mastodonActionOverrides.update { overrides ->
-            overrides + (post.id to post) + (post.detailId to post)
+            (overrides + (post.id to post) + (post.detailId to post)).bounded()
         }
     }
 
     private fun setPixelfedOverride(post: PixelfedPostUiModel) {
         _pixelfedActionOverrides.update { overrides ->
-            overrides + (post.id to post)
+            (overrides + (post.id to post)).bounded()
         }
     }
 
     private fun setLemmyOverride(post: LemmyPostUiModel) {
         _lemmyActionOverrides.update { overrides ->
-            overrides + (post.id to post)
+            (overrides + (post.id to post)).bounded()
+        }
+    }
+
+    private fun <T> Map<String, T>.bounded(maxSize: Int = MAX_ACTION_OVERRIDES): Map<String, T> =
+        if (size <= maxSize) {
+            this
+        } else {
+            entries.drop(size - maxSize).associate { entry -> entry.key to entry.value }
+        }
+
+    private fun clearPlatformTransientState(platform: PlatformType) {
+        when (platform) {
+            PlatformType.MASTODON -> {
+                _mastodonActionOverrides.value = emptyMap()
+                _replyComposeState.value = null
+                _newPostComposeState.value = null
+            }
+            PlatformType.PIXELFED -> {
+                _pixelfedActionOverrides.value = emptyMap()
+                _pixelfedCommentsState.value = null
+            }
+            PlatformType.LEMMY -> {
+                _lemmyActionOverrides.value = emptyMap()
+            }
         }
     }
 
@@ -569,5 +611,7 @@ private fun debugLog(message: String) {
 }
 
 sealed interface HomeEffect {
-    data object NavigateToMastodonLogin : HomeEffect
+    data object NavigateToProfile : HomeEffect
 }
+
+private const val MAX_ACTION_OVERRIDES = 160

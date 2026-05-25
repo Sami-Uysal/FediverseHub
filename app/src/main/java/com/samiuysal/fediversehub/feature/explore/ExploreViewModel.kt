@@ -9,6 +9,7 @@ import com.samiuysal.fediversehub.core.common.error.userMessage
 import com.samiuysal.fediversehub.core.common.result.AppResult
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.core.performance.PerfLogger
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.lemmy.LemmyCommunityUiModel
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
@@ -78,7 +79,7 @@ class ExploreViewModel @Inject constructor(
                         !it.accessToken.isNullOrBlank()
                 } ?: accounts.firstOrNull {
                     it.platform == PlatformType.PIXELFED && !it.accessToken.isNullOrBlank()
-                }
+                } ?: PlatformType.PIXELFED.publicExploreAccount()
             }
         }.distinctUntilChanged()
 
@@ -106,7 +107,7 @@ class ExploreViewModel @Inject constructor(
                         !it.accessToken.isNullOrBlank()
                 } ?: accounts.firstOrNull {
                     it.platform == PlatformType.LEMMY && !it.accessToken.isNullOrBlank()
-                }
+                } ?: PlatformType.LEMMY.publicExploreAccount()
             }
         }.distinctUntilChanged()
 
@@ -133,18 +134,29 @@ class ExploreViewModel @Inject constructor(
 
     fun selectPlatform(platform: PlatformType) {
         selectedPlatform.value = platform
+        if (platform == PlatformType.MASTODON && currentMastodonAccount == null) {
+            currentMastodonAccount = PlatformType.MASTODON.publicExploreAccount()
+            loadMastodonTab(currentMastodonAccount ?: return, _mastodonState.value.selectedTab)
+        }
+        if (platform == PlatformType.LEMMY && currentLemmyAccount == null && _lemmyTab.value == LemmyExploreTab.COMMUNITIES) {
+            currentLemmyAccount = PlatformType.LEMMY.publicExploreAccount()
+            loadLemmyCommunities(currentLemmyAccount)
+        }
     }
 
     fun selectAccount(account: Account?) {
         selectedAccountId.value = account?.id
-        if (account?.platform == PlatformType.MASTODON && !account.accessToken.isNullOrBlank()) {
-            currentMastodonAccount = account
-            loadMastodonTab(account, _mastodonState.value.selectedTab)
-        } else {
-            currentMastodonAccount = null
+        if (selectedPlatform.value == PlatformType.MASTODON) {
+            val mastodonAccount = account
+                ?.takeIf { it.platform == PlatformType.MASTODON && !it.accessToken.isNullOrBlank() }
+                ?: PlatformType.MASTODON.publicExploreAccount()
+            currentMastodonAccount = mastodonAccount
+            loadMastodonTab(mastodonAccount, _mastodonState.value.selectedTab)
         }
-        currentLemmyAccount = account?.takeIf {
-            it.platform == PlatformType.LEMMY && !it.accessToken.isNullOrBlank()
+        if (selectedPlatform.value == PlatformType.LEMMY) {
+            currentLemmyAccount = account
+                ?.takeIf { it.platform == PlatformType.LEMMY && !it.accessToken.isNullOrBlank() }
+                ?: PlatformType.LEMMY.publicExploreAccount()
         }
         if (_lemmyTab.value == LemmyExploreTab.COMMUNITIES) {
             loadLemmyCommunities(currentLemmyAccount)
@@ -175,10 +187,12 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun refreshMastodon(account: Account?) {
-        if (account?.platform == PlatformType.MASTODON && !account.accessToken.isNullOrBlank()) {
-            loadedTabsByAccount[account.id]?.remove(_mastodonState.value.selectedTab)
-            loadMastodonTab(account, _mastodonState.value.selectedTab)
-        }
+        val mastodonAccount = account
+            ?.takeIf { it.platform == PlatformType.MASTODON && !it.accessToken.isNullOrBlank() }
+            ?: currentMastodonAccount
+            ?: PlatformType.MASTODON.publicExploreAccount()
+        loadedTabsByAccount[mastodonAccount.id]?.remove(_mastodonState.value.selectedTab)
+        loadMastodonTab(mastodonAccount, _mastodonState.value.selectedTab)
     }
 
     private fun loadMastodonTab(account: Account, tab: MastodonExploreTab) {
@@ -188,12 +202,14 @@ class ExploreViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
+            val perfMark = PerfLogger.mark("explore_${tab.name.lowercase()}_load")
             _mastodonState.update { it.copy(loadingTab = tab, errorMessage = null) }
             when (tab) {
                 MastodonExploreTab.POSTS -> loadPosts(account)
                 MastodonExploreTab.TAGS -> loadTags(account)
                 MastodonExploreTab.LINKS -> loadLinks(account)
             }
+            PerfLogger.end(perfMark, account.instanceUrl)
         }
     }
 
@@ -269,16 +285,14 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun loadLemmyCommunities(account: Account?) {
-        if (account == null) {
-            _lemmyCommunitiesState.value = LemmyCommunitiesUiState()
-            return
-        }
+        val targetAccount = account ?: PlatformType.LEMMY.publicExploreAccount()
         viewModelScope.launch {
+            val perfMark = PerfLogger.mark("lemmy_communities_load")
             _lemmyCommunitiesState.value = LemmyCommunitiesUiState(isLoading = true)
             when (
                 val result = withContext(Dispatchers.IO) {
                     lemmyRepository.getCommunities(
-                        account = account,
+                        account = targetAccount,
                         page = LemmyPostPage(
                             sort = _lemmySort.value,
                             feedType = LemmyFeedType.ALL,
@@ -296,6 +310,7 @@ class ExploreViewModel @Inject constructor(
                     _lemmyCommunitiesState.value = LemmyCommunitiesUiState(errorMessage = result.error.userMessage())
                 }
             }
+            PerfLogger.end(perfMark, targetAccount.instanceUrl)
         }
     }
 }
@@ -305,4 +320,35 @@ private val LemmyExploreTab.feedType: LemmyFeedType
         LemmyExploreTab.ALL -> LemmyFeedType.ALL
         LemmyExploreTab.LOCAL -> LemmyFeedType.LOCAL
         LemmyExploreTab.COMMUNITIES -> LemmyFeedType.ALL
+    }
+
+private fun PlatformType.publicExploreAccount(): Account =
+    when (this) {
+        PlatformType.MASTODON -> Account(
+            id = "public-mastodon-mastodon.social",
+            platform = PlatformType.MASTODON,
+            instanceUrl = "mastodon.social",
+            username = "public",
+            displayName = "Mastodon Public",
+            avatarUrl = null,
+            accessToken = null,
+        )
+        PlatformType.PIXELFED -> Account(
+            id = "public-pixelfed-pixelfed.social",
+            platform = PlatformType.PIXELFED,
+            instanceUrl = "pixelfed.social",
+            username = "public",
+            displayName = "Pixelfed Public",
+            avatarUrl = null,
+            accessToken = null,
+        )
+        PlatformType.LEMMY -> Account(
+            id = "public-lemmy-lemmy.world",
+            platform = PlatformType.LEMMY,
+            instanceUrl = "lemmy.world",
+            username = "public",
+            displayName = "Lemmy Public",
+            avatarUrl = null,
+            accessToken = null,
+        )
     }
