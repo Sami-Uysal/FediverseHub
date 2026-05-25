@@ -44,6 +44,7 @@ captures/
 # Logs
 *.log
 artifacts/
+repos/
 
 # OS files
 .DS_Store
