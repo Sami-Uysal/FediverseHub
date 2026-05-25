@@ -41,13 +41,23 @@ class LemmyAuthRepositoryImpl @Inject constructor(
             )
             val jwt = response.jwt?.takeIf { it.isNotBlank() }
                 ?: return AppResult.Failure(AppError.Unauthorized)
+            val person = runCatching {
+                lemmyApi.getSite(instanceUrl = cleanInstance, accessToken = jwt)
+                    .myUser
+                    ?.localUserView
+                    ?.person
+            }.getOrNull()
+            val username = person?.name?.takeIf(String::isNotBlank)
+                ?: cleanUser.substringBefore("@").takeIf(String::isNotBlank)
+                ?: cleanUser
+            val displayName = person?.displayName?.takeIf(String::isNotBlank) ?: username
             val account = Account(
-                id = "lemmy-${cleanInstance.lowercase()}-${cleanUser.lowercase()}",
+                id = "lemmy-${cleanInstance.lowercase()}-${username.lowercase()}",
                 platform = PlatformType.LEMMY,
                 instanceUrl = cleanInstance,
-                username = cleanUser,
-                displayName = cleanUser,
-                avatarUrl = null,
+                username = username,
+                displayName = displayName,
+                avatarUrl = person?.avatarUrl,
                 accessToken = jwt,
             )
             accountStore.saveAccount(account)

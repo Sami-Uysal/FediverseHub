@@ -19,4 +19,5 @@ sealed interface MastodonAuthUiEvent {
 
 sealed interface MastodonAuthEffect {
     data class OpenAuthorizeUrl(val url: String) : MastodonAuthEffect
+    data object LoginCompleted : MastodonAuthEffect
 }

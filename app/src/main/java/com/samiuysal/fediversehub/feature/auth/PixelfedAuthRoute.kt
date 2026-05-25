@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun PixelfedAuthRoute(
     oauthCallbackUri: Uri?,
     onOAuthCallbackConsumed: () -> Unit,
+    onLoginCompleted: () -> Unit = {},
     viewModel: PixelfedAuthViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -30,6 +31,7 @@ fun PixelfedAuthRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is PixelfedAuthEffect.OpenAuthorizeUrl -> uriHandler.openUri(effect.url)
+                PixelfedAuthEffect.LoginCompleted -> onLoginCompleted()
             }
         }
     }

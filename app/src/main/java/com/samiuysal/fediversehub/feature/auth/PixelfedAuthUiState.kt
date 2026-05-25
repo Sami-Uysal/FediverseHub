@@ -19,4 +19,5 @@ sealed interface PixelfedAuthUiEvent {
 
 sealed interface PixelfedAuthEffect {
     data class OpenAuthorizeUrl(val url: String) : PixelfedAuthEffect
+    data object LoginCompleted : PixelfedAuthEffect
 }

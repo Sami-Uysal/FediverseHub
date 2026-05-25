@@ -74,6 +74,7 @@ class PixelfedAuthViewModel @Inject constructor(
             when (val result = repository.handleCallback(callbackUrl)) {
                 is AppResult.Success -> {
                     _uiState.update { it.copy(isLoading = false, account = result.data) }
+                    _effects.emit(PixelfedAuthEffect.LoginCompleted)
                 }
                 is AppResult.Failure -> {
                     _uiState.update {
@@ -100,10 +101,10 @@ class PixelfedAuthViewModel @Inject constructor(
     }
 
     private fun AppError.userMessage(): String = when (this) {
-        AppError.Network -> "Network error. Check instance URL and connection."
-        AppError.RateLimited -> "Instance rate limit reached. Try again later."
-        AppError.Unauthorized -> "Pixelfed authorization failed. Please retry login."
-        is AppError.Server -> "Server error: $code"
-        is AppError.Unknown -> "Unexpected auth error."
+        AppError.Network -> "Giriş yapılamadı. Instance adresini ve bağlantını kontrol et."
+        AppError.RateLimited -> "Çok hızlı deneme yapıldı. Biraz bekle, tekrar dene."
+        AppError.Unauthorized -> "Pixelfed yetkilendirmesi başarısız. Tekrar giriş yap."
+        is AppError.Server -> "Sunucu şu an girişe yanıt veremiyor. Biraz sonra tekrar dene."
+        is AppError.Unknown -> "Giriş yapılamadı. Instance adresini kontrol et."
     }
 }

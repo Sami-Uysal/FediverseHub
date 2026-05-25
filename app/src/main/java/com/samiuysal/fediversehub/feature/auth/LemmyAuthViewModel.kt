@@ -96,9 +96,13 @@ class LemmyAuthViewModel @Inject constructor(
 
     private fun AppError.userMessage(): String = when (this) {
         AppError.Network -> LEMMY_LOGIN_ERROR
-        AppError.RateLimited -> "Instance rate limit reached. Try again later."
+        AppError.RateLimited -> "Çok hızlı deneme yapıldı. Biraz bekle, tekrar dene."
         AppError.Unauthorized -> LEMMY_LOGIN_ERROR
-        is AppError.Server -> "Server error: $code"
+        is AppError.Server -> if (code == 400) {
+            LEMMY_LOGIN_ERROR
+        } else {
+            "Sunucu şu an girişe yanıt veremiyor. Biraz sonra tekrar dene."
+        }
         is AppError.Unknown -> LEMMY_LOGIN_ERROR
     }
 

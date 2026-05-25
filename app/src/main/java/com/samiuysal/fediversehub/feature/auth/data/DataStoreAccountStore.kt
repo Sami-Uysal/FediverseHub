@@ -91,6 +91,11 @@ class DataStoreAccountStore @Inject constructor(
 
     override suspend fun saveActiveAccount(platform: PlatformType, accountId: String) {
         context.authDataStore.edit { preferences ->
+            val exists = preferences[ACCOUNTS_JSON]
+                ?.decodeStoredAccounts()
+                .orEmpty()
+                .any { it.platform == platform && it.id == accountId }
+            if (!exists) return@edit
             val activeAccounts = preferences[ACTIVE_ACCOUNTS_JSON]
                 ?.decodeActiveAccounts()
                 .orEmpty()

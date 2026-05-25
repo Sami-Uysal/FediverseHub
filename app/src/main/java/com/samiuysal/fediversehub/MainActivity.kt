@@ -1,6 +1,7 @@
 package com.samiuysal.fediversehub
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private var oauthCallbackUri by mutableStateOf<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         super.onCreate(savedInstanceState)
         oauthCallbackUri = intent.data.takeIf { it?.scheme == OAUTH_SCHEME }
         enableEdgeToEdge()

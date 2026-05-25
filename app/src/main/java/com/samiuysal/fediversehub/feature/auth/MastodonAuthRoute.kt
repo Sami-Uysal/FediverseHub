@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun MastodonAuthRoute(
     oauthCallbackUri: Uri?,
     onOAuthCallbackConsumed: () -> Unit,
+    onLoginCompleted: () -> Unit = {},
     viewModel: MastodonAuthViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -30,6 +31,7 @@ fun MastodonAuthRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is MastodonAuthEffect.OpenAuthorizeUrl -> uriHandler.openUri(effect.url)
+                MastodonAuthEffect.LoginCompleted -> onLoginCompleted()
             }
         }
     }
