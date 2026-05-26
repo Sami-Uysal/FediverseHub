@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,6 +26,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samiuysal.fediversehub.BuildConfig
 import com.samiuysal.fediversehub.core.designsystem.component.AppAvatar
 import com.samiuysal.fediversehub.core.datastore.ThemeMode
+import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
@@ -109,7 +117,7 @@ fun SettingsScreen(
                 )
             }
             Text(
-                text = "Settings",
+                text = "Ayarlar",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
@@ -119,56 +127,122 @@ fun SettingsScreen(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .padding(AppSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
         ) {
-            SettingsRow(
-                title = "Active platform",
-                value = selectedPlatform.label,
-            )
-            SettingsAccountRow(account = account)
-            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-                Text(
-                    text = "Account switch",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            SettingsSection(
+                title = "Hesap",
+                icon = Icons.Outlined.AccountCircle,
+            ) {
+                SettingsRow(
+                    title = "Aktif platform",
+                    value = selectedPlatform.label,
                 )
-                AccountSwitcher(
-                    accounts = platformAccounts,
-                    selectedAccount = account,
-                    onAccountSelected = onAccountSelected,
+                SettingsAccountRow(account = account)
+                Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                    Text(
+                        text = "Hesap değiştir",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    AccountSwitcher(
+                        accounts = platformAccounts,
+                        selectedAccount = account,
+                        onAccountSelected = onAccountSelected,
+                    )
+                }
+                SettingsRow(
+                    title = "Bu platformdaki hesaplar",
+                    value = "${platformAccounts.size}",
+                )
+                SettingsRow(
+                    title = "Toplam hesap",
+                    value = "${allAccounts.size}",
                 )
             }
-            SettingsRow(
-                title = "Accounts on this platform",
-                value = "${platformAccounts.size}",
-            )
-            SettingsRow(
-                title = "All accounts",
-                value = "${allAccounts.size}",
-            )
-            ThemeModeSelector(
-                selectedMode = themeMode,
-                onThemeModeSelected = onThemeModeSelected,
-            )
-            CacheSection(
-                state = cacheState,
-                onClearCache = onClearCache,
-            )
-            SettingsRow(
-                title = "Token storage",
-                value = "Android Keystore encrypted",
-            )
-            SettingsRow(
-                title = "About",
-                value = "FediverseHub $appVersion",
-            )
+
+            SettingsSection(
+                title = "Görünüm",
+                icon = Icons.Outlined.Palette,
+            ) {
+                ThemeModeSelector(
+                    selectedMode = themeMode,
+                    onThemeModeSelected = onThemeModeSelected,
+                )
+            }
+
+            SettingsSection(
+                title = "Depolama",
+                icon = Icons.Outlined.Storage,
+            ) {
+                CacheSection(
+                    state = cacheState,
+                    onClearCache = onClearCache,
+                )
+            }
+
+            SettingsSection(
+                title = "Güvenlik",
+                icon = Icons.Outlined.Security,
+            ) {
+                SettingsRow(
+                    title = "Token saklama",
+                    value = "Android Keystore ile şifreli",
+                )
+            }
+
+            SettingsSection(
+                title = "Uygulama",
+                icon = Icons.Outlined.Info,
+            ) {
+                SettingsRow(
+                    title = "Sürüm",
+                    value = "FediverseHub $appVersion",
+                )
+            }
+
             Button(
                 enabled = account != null,
                 onClick = onLogout,
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
-                Text("Logout")
+                Text("Çıkış yap")
             }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f),
+        shape = RoundedCornerShape(AppRadius.sm),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            content()
         }
     }
 }

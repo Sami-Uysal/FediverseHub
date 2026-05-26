@@ -24,13 +24,16 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -65,6 +68,7 @@ import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.home.PlatformSwitcher
 import com.samiuysal.fediversehub.feature.lemmy.LemmyCommunityUiModel
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
@@ -77,6 +81,7 @@ fun ExploreRoute(
     selectedPlatform: PlatformType,
     selectedAccount: Account?,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
     onLemmyPostSelected: (String) -> Unit,
@@ -103,6 +108,7 @@ fun ExploreRoute(
             account = selectedAccount,
             state = mastodonState,
             contentPadding = contentPadding,
+            onPlatformSelected = onPlatformSelected,
             onTabSelected = viewModel::selectMastodonTab,
             onRetry = { viewModel.refreshMastodon(selectedAccount) },
             onPostSelected = onPostSelected,
@@ -115,6 +121,7 @@ fun ExploreRoute(
                 account = selectedAccount,
                 posts = posts,
                 contentPadding = contentPadding,
+                onPlatformSelected = onPlatformSelected,
                 onPostSelected = onPixelfedPostSelected,
                 onMediaSelected = onMediaSelected,
             )
@@ -128,6 +135,7 @@ fun ExploreRoute(
                 selectedSort = lemmySort,
                 communitiesState = lemmyCommunitiesState,
                 contentPadding = contentPadding,
+                onPlatformSelected = onPlatformSelected,
                 onTabSelected = viewModel::selectLemmyTab,
                 onSortSelected = viewModel::selectLemmySort,
                 onRetryCommunities = viewModel::refreshLemmyCommunities,
@@ -143,6 +151,7 @@ private fun MastodonExploreContent(
     account: Account?,
     state: MastodonExploreUiState,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onTabSelected: (MastodonExploreTab) -> Unit,
     onRetry: () -> Unit,
     onPostSelected: (String) -> Unit,
@@ -155,8 +164,10 @@ private fun MastodonExploreContent(
             .padding(contentPadding),
     ) {
         ExploreHeader(
+            selectedPlatform = PlatformType.MASTODON,
+            onPlatformSelected = onPlatformSelected,
             title = "Keşfet",
-            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Public Mastodon trendleri",
+            subtitle = "Public trendler",
         )
         MastodonExploreTabs(
             selectedTab = state.selectedTab,
@@ -193,6 +204,8 @@ private fun MastodonExploreContent(
 
 @Composable
 private fun ExploreHeader(
+    selectedPlatform: PlatformType,
+    onPlatformSelected: (PlatformType) -> Unit,
     title: String,
     subtitle: String,
 ) {
@@ -201,7 +214,17 @@ private fun ExploreHeader(
             .fillMaxWidth()
             .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
     ) {
-        Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PlatformSwitcher(
+                selectedPlatform = selectedPlatform,
+                onPlatformSelected = onPlatformSelected,
+            )
+            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
@@ -390,6 +413,7 @@ private fun LemmyExploreContent(
     selectedSort: LemmySortType,
     communitiesState: LemmyCommunitiesUiState,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onTabSelected: (LemmyExploreTab) -> Unit,
     onSortSelected: (LemmySortType) -> Unit,
     onRetryCommunities: () -> Unit,
@@ -402,8 +426,10 @@ private fun LemmyExploreContent(
             .padding(contentPadding),
     ) {
         ExploreHeader(
-            title = "Lemmy Keşfet",
-            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Public Lemmy keşfi",
+            selectedPlatform = PlatformType.LEMMY,
+            onPlatformSelected = onPlatformSelected,
+            title = "Keşfet",
+            subtitle = "Public akış",
         )
         LemmyExploreTabs(
             selectedTab = selectedTab,
@@ -415,13 +441,13 @@ private fun LemmyExploreContent(
         )
         when {
             posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> AppLoading(
-                message = "Lemmy keşfet yükleniyor...",
+                message = "Yükleniyor...",
                 modifier = Modifier.weight(1f),
             )
             posts.loadState.refresh is LoadState.Error && posts.itemCount == 0 -> {
                 val error = posts.loadState.refresh as LoadState.Error
                 AppErrorState(
-                    message = error.error.userFacingMessage("Lemmy keşfet yüklenemedi."),
+                    message = error.error.userFacingMessage("Keşfet yüklenemedi."),
                     onRetry = posts::retry,
                     modifier = Modifier.weight(1f),
                 )
@@ -702,22 +728,31 @@ private fun LemmyCommunityDiscoveryRow(
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PixelfedExploreContent(
     account: Account?,
     posts: androidx.paging.compose.LazyPagingItems<PixelfedPostUiModel>,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     onMediaSelected: (List<String>, List<Boolean>, Int) -> Unit,
 ) {
+    val isRefreshing by remember(posts) {
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount > 0
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
     ) {
         ExploreHeader(
+            selectedPlatform = PlatformType.PIXELFED,
+            onPlatformSelected = onPlatformSelected,
             title = "Keşfet",
-            subtitle = account?.let { "@${it.username} · ${it.instanceUrl}" } ?: "Public Pixelfed medya",
+            subtitle = "Public medya",
         )
         when {
             posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> AppLoading(
@@ -737,29 +772,35 @@ private fun PixelfedExploreContent(
                 message = "Public Pixelfed timeline şu an boş.",
                 modifier = Modifier.weight(1f),
             )
-            else -> LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
+            else -> PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = posts::refresh,
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(1.dp),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
-                items(
-                    count = posts.itemCount,
-                    key = posts.itemKey { it.id },
-                    contentType = posts.itemContentType { "pixelfed-explore-media" },
-                ) { index ->
-                    posts[index]?.let { post ->
-                        PixelfedExploreTile(
-                            post = post,
-                            onClick = {
-                                onPostSelected(post.id)
-                            },
-                        )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
+                    verticalArrangement = Arrangement.spacedBy(1.dp),
+                ) {
+                    items(
+                        count = posts.itemCount,
+                        key = posts.itemKey { it.id },
+                        contentType = posts.itemContentType { "pixelfed-explore-media" },
+                    ) { index ->
+                        posts[index]?.let { post ->
+                            PixelfedExploreTile(
+                                post = post,
+                                onClick = {
+                                    onPostSelected(post.id)
+                                },
+                            )
+                        }
                     }
-                }
-                if (posts.loadState.append is LoadState.Loading) {
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                        AppLoading(message = "Daha fazla yükleniyor...", modifier = Modifier.height(96.dp))
+                    if (posts.loadState.append is LoadState.Loading) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                            AppLoading(message = "Daha fazla yükleniyor...", modifier = Modifier.height(96.dp))
+                        }
                     }
                 }
             }

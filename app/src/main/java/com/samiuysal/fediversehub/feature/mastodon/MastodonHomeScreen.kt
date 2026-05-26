@@ -22,12 +22,13 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -60,6 +61,7 @@ import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.home.MockFediverseData
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MastodonHomeScreen(
     account: Account?,
@@ -85,6 +87,11 @@ fun MastodonHomeScreen(
             posts.loadState.refresh is LoadState.NotLoading && posts.itemCount == 0
         }
     }
+    val isRefreshing by remember(posts) {
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount > 0
+        }
+    }
 
     Column(modifier = modifier) {
         if (showTopBar) {
@@ -104,14 +111,20 @@ fun MastodonHomeScreen(
                 title = "No posts yet",
                 message = "Your Mastodon timeline will appear here after refresh.",
             )
-            else -> MastodonTimelineList(
-                posts = posts,
-                actionOverrides = actionOverrides,
-                onPostClick = onPostClick,
-                onAuthorClick = onAuthorClick,
-                onMediaClick = onMediaClick,
-                onPostAction = onPostAction,
-            )
+            else -> PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = posts::refresh,
+                modifier = Modifier.weight(1f),
+            ) {
+                MastodonTimelineList(
+                    posts = posts,
+                    actionOverrides = actionOverrides,
+                    onPostClick = onPostClick,
+                    onAuthorClick = onAuthorClick,
+                    onMediaClick = onMediaClick,
+                    onPostAction = onPostAction,
+                )
+            }
         }
     }
 }
@@ -174,10 +187,6 @@ private fun MastodonTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
             ) {
-                AssistChip(
-                    onClick = onRefresh,
-                    label = { Text("Live") },
-                )
                 AppAvatar(
                     imageUrl = account?.avatarUrl,
                     name = account?.displayName ?: "M",

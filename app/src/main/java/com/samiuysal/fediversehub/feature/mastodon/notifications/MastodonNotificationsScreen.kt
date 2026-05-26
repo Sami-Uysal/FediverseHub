@@ -53,13 +53,17 @@ import com.samiuysal.fediversehub.core.designsystem.component.AppLoading
 import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
+import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.home.PlatformSwitcher
 import com.samiuysal.fediversehub.feature.mastodon.data.mock.MockMastodonData
 import com.samiuysal.fediversehub.feature.mastodon.domain.MastodonNotificationType
 import com.samiuysal.fediversehub.feature.mastodon.mapper.MastodonNotificationMapper
 
 @Composable
 fun MastodonNotificationsScreen(
+    selectedPlatform: PlatformType,
     notifications: LazyPagingItems<MastodonNotificationUiModel>,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     onProfileSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -79,7 +83,10 @@ fun MastodonNotificationsScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        MastodonNotificationsTopBar()
+        MastodonNotificationsTopBar(
+            selectedPlatform = selectedPlatform,
+            onPlatformSelected = onPlatformSelected,
+        )
         when {
             isInitialLoading -> AppLoading(
                 message = "Loading notifications...",
@@ -113,7 +120,10 @@ fun MastodonNotificationsContent(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        MastodonNotificationsTopBar()
+        MastodonNotificationsTopBar(
+            selectedPlatform = PlatformType.MASTODON,
+            onPlatformSelected = {},
+        )
         if (notifications.isEmpty()) {
             EmptyState(
                 title = "No notifications yet",
@@ -142,7 +152,10 @@ fun MastodonNotificationsContent(
 }
 
 @Composable
-private fun MastodonNotificationsTopBar() {
+private fun MastodonNotificationsTopBar(
+    selectedPlatform: PlatformType,
+    onPlatformSelected: (PlatformType) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.background.copy(alpha = 0.98f),
@@ -152,20 +165,29 @@ private fun MastodonNotificationsTopBar() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
-                    .padding(horizontal = AppSpacing.lg),
+                    .padding(horizontal = AppSpacing.md),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                PlatformSwitcher(
+                    selectedPlatform = selectedPlatform,
+                    onPlatformSelected = onPlatformSelected,
                 )
-                Text(
-                    text = "Notifications",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "Bildirimler",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.68f))
         }

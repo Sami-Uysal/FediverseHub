@@ -30,8 +30,6 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ModeComment
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -96,11 +94,6 @@ fun LemmyHomeScreen(
             posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0
         }
     }
-    val isRefreshing by remember(posts) {
-        derivedStateOf {
-            posts.loadState.refresh is LoadState.Loading && posts.itemCount > 0
-        }
-    }
     val refreshError by remember(posts) {
         derivedStateOf { posts.loadState.refresh as? LoadState.Error }
     }
@@ -109,15 +102,19 @@ fun LemmyHomeScreen(
             posts.loadState.refresh is LoadState.NotLoading && posts.itemCount == 0
         }
     }
+    val isRefreshing by remember(posts) {
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount > 0
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         if (showTopBar) {
-            LemmyTopBar(account = account, onRefresh = posts::refresh)
+            LemmyTopBar(account = account)
         }
         LemmyHomeControls(
             selectedSort = selectedSort,
             onSortSelected = onSortSelected,
-            onRefresh = posts::refresh,
         )
 
         when {
@@ -158,7 +155,6 @@ fun LemmyHomeScreenContent(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     onRetry: () -> Unit = {},
-    onRefresh: () -> Unit = {},
     showTopBar: Boolean = true,
     selectedSort: LemmySortType = LemmySortType.HOT,
     onSortSelected: (LemmySortType) -> Unit = {},
@@ -168,12 +164,11 @@ fun LemmyHomeScreenContent(
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         if (showTopBar) {
-            LemmyTopBar(account = account, onRefresh = onRefresh)
+            LemmyTopBar(account = account)
         }
         LemmyHomeControls(
             selectedSort = selectedSort,
             onSortSelected = onSortSelected,
-            onRefresh = onRefresh,
         )
 
         when {
@@ -202,23 +197,10 @@ fun LemmyHomeScreenContent(
 @Composable
 private fun LemmyTopBar(
     account: Account?,
-    onRefresh: () -> Unit,
 ) {
     AppTopBar(
         title = "Lemmy",
         subtitle = "${account?.instanceUrl.orEmpty()} · home",
-        actions = {
-            AssistChip(
-                onClick = onRefresh,
-                label = { Text("Yenile") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Refresh,
-                        contentDescription = null,
-                    )
-                },
-            )
-        },
     )
 }
 
@@ -226,7 +208,6 @@ private fun LemmyTopBar(
 private fun LemmyHomeControls(
     selectedSort: LemmySortType,
     onSortSelected: (LemmySortType) -> Unit,
-    onRefresh: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -247,16 +228,6 @@ private fun LemmyHomeControls(
                 ),
             )
         }
-        AssistChip(
-            onClick = onRefresh,
-            label = { Text("Yenile") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = null,
-                )
-            },
-        )
     }
 }
 
@@ -271,9 +242,9 @@ private fun LemmyPostList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = AppSpacing.lg,
+            start = 6.dp,
             top = 0.dp,
-            end = AppSpacing.lg,
+            end = 0.dp,
             bottom = AppSpacing.xl,
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -286,7 +257,7 @@ private fun LemmyPostList(
             LemmyPostCard(
                 post = post,
                 onClick = { onPostClick(post.id) },
-                onCommunityClick = { onCommunityClick(post.communityId ?: post.communityActorId ?: post.community) },
+                onCommunityClick = { onCommunityClick(post.communityActorId ?: post.communityId ?: post.community) },
                 onPostAction = onPostAction,
             )
         }
@@ -305,9 +276,9 @@ private fun LemmyPostList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = AppSpacing.lg,
+            start = 6.dp,
             top = 0.dp,
-            end = AppSpacing.lg,
+            end = 0.dp,
             bottom = AppSpacing.xl,
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -325,7 +296,7 @@ private fun LemmyPostList(
                 LemmyPostCard(
                     post = visiblePost,
                     onClick = { onPostClick(visiblePost.id) },
-                    onCommunityClick = { onCommunityClick(visiblePost.communityId ?: visiblePost.communityActorId ?: visiblePost.community) },
+                    onCommunityClick = { onCommunityClick(visiblePost.communityActorId ?: visiblePost.communityId ?: visiblePost.community) },
                     onPostAction = onPostAction,
                 )
             }
@@ -367,7 +338,12 @@ private fun LemmyPostCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md),
+                    .padding(
+                        start = 0.dp,
+                        top = AppSpacing.md,
+                        end = AppSpacing.md,
+                        bottom = AppSpacing.md,
+                    ),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
                 verticalAlignment = Alignment.Top,
             ) {
@@ -685,7 +661,12 @@ private fun LemmyPostSkeleton() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(AppSpacing.lg),
+                .padding(
+                    start = 0.dp,
+                    top = AppSpacing.lg,
+                    end = AppSpacing.lg,
+                    bottom = AppSpacing.lg,
+                ),
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
         ) {
             SkeletonBlock(

@@ -60,9 +60,16 @@ fun OnboardingScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.xxl),
+            .padding(
+                start = AppSpacing.lg,
+                top = AppSpacing.xxl + 2.dp,
+                end = AppSpacing.lg,
+                bottom = AppSpacing.xxl,
+            ),
         verticalArrangement = Arrangement.spacedBy(AppSpacing.xl),
     ) {
+        SelectedPlatformBadge(info = selectedInfo)
+
         Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
             BrandMark()
             Text(
@@ -121,6 +128,32 @@ fun OnboardingScreen(
                 icon = Icons.Outlined.Explore,
                 onClick = onExplore,
                 modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectedPlatformBadge(info: PlatformInfo) {
+    Surface(
+        color = info.color.copy(alpha = 0.12f),
+        contentColor = info.color,
+        shape = RoundedCornerShape(AppRadius.full),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = info.icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = "Seçili: ${info.name}",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
             )
         }
     }

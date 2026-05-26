@@ -180,7 +180,10 @@ class LemmyCommunityViewModel @Inject constructor(
             ) {
                 is AppResult.Success -> {
                     _uiState.value = current.copy(
-                        community = LemmyPostMapper.communityToUi(result.data).copy(isFollowLoading = false),
+                        community = LemmyPostMapper.communityToUi(result.data).copy(
+                            isSubscribed = optimistic.isSubscribed,
+                            isFollowLoading = false,
+                        ),
                     )
                 }
                 is AppResult.Failure -> {
@@ -198,7 +201,9 @@ class LemmyCommunityViewModel @Inject constructor(
             _uiState.value = LemmyCommunityUiState.Loading
             when (val result = lemmyRepository.getCommunity(lemmyAccount(), communityName)) {
                 is AppResult.Success -> {
-                    resolvedCommunityName.value = result.data.name
+                    resolvedCommunityName.value = result.data.id.ifBlank {
+                        result.data.actorId?.canonicalCommunityName() ?: result.data.name
+                    }
                     _uiState.value = LemmyCommunityUiState.Success(
                         community = LemmyPostMapper.communityToUi(result.data),
                     )
@@ -238,6 +243,19 @@ class LemmyCommunityViewModel @Inject constructor(
 sealed interface LemmyCommunityEffect {
     data object NavigateToLogin : LemmyCommunityEffect
     data class PostCreated(val postId: String) : LemmyCommunityEffect
+}
+
+private fun String.canonicalCommunityName(): String? {
+    val trimmed = trim().trimEnd('/')
+    val host = trimmed
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .substringBefore("/")
+        .takeIf(String::isNotBlank)
+    val name = trimmed
+        .substringAfterLast("/c/", missingDelimiterValue = "")
+        .takeIf(String::isNotBlank)
+    return if (host != null && name != null) "$name@$host" else null
 }
 
 private fun AppError.lemmyMessage(): String = when (this) {

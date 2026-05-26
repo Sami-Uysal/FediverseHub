@@ -101,7 +101,7 @@ object LemmyApiMapper {
             subscribers = view.counts.subscribers,
             posts = view.counts.posts,
             comments = view.counts.comments,
-            subscribed = view.subscribed.equals("Subscribed", ignoreCase = true),
+            subscribed = view.subscribed.isLemmySubscribed(),
         )
 
     fun userToProfile(
@@ -178,3 +178,6 @@ val LemmyFeedType.apiValue: String
         LemmyFeedType.LOCAL -> "Local"
         LemmyFeedType.ALL -> "All"
     }
+
+internal fun String?.isLemmySubscribed(): Boolean =
+    this?.equals("NotSubscribed", ignoreCase = true) == false

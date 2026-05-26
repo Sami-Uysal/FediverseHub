@@ -57,6 +57,7 @@ fun FediverseHubApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: AppDestination.HOME
     var onboardingTargetRoute by rememberSaveable { mutableStateOf<String?>(null) }
+    var createPostRequestKey by rememberSaveable { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         PerfLogger.log("app_start_compose")
@@ -133,12 +134,26 @@ fun FediverseHubApp(
                     profileName = appState.selectedAccount?.displayName
                         ?: appState.selectedAccount?.username
                         ?: "Profile",
+                    onCreateClick = {
+                        createPostRequestKey += 1
+                        if (selectedRoute != AppDestination.HOME) {
+                            navController.navigate(AppDestination.HOME) {
+                                launchSingleTop = true
+                                restoreState = false
+                                popUpTo(AppDestination.HOME) {
+                                    saveState = false
+                                }
+                            }
+                        }
+                    },
                     onItemSelected = { route ->
-                        navController.navigate(route) {
-                            launchSingleTop = true
-                            restoreState = true
-                            popUpTo(AppDestination.HOME) {
-                                saveState = true
+                        if (route != selectedRoute) {
+                            navController.navigate(route) {
+                                launchSingleTop = true
+                                restoreState = route != AppDestination.HOME
+                                popUpTo(AppDestination.HOME) {
+                                    saveState = route != AppDestination.HOME
+                                }
                             }
                         }
                     },
@@ -155,7 +170,13 @@ fun FediverseHubApp(
                     contentPadding = contentPadding,
                     selectedPlatform = appState.selectedPlatform,
                     selectedAccount = appState.selectedAccount,
+                    createPostRequestKey = createPostRequestKey,
                     onPlatformSelected = appStateViewModel::selectPlatform,
+                    onNotificationsClick = {
+                        navController.navigate(AppDestination.NOTIFICATIONS) {
+                            launchSingleTop = true
+                        }
+                    },
                     onMastodonPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
@@ -221,6 +242,7 @@ fun FediverseHubApp(
                     selectedPlatform = appState.selectedPlatform,
                     selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
+                    onPlatformSelected = appStateViewModel::selectPlatform,
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },
@@ -249,6 +271,7 @@ fun FediverseHubApp(
                     selectedPlatform = appState.selectedPlatform,
                     selectedAccount = appState.selectedAccount,
                     contentPadding = contentPadding,
+                    onPlatformSelected = appStateViewModel::selectPlatform,
                     onPostSelected = { postId ->
                         navController.navigate(AppDestination.mastodonPostDetail(Uri.encode(postId)))
                     },

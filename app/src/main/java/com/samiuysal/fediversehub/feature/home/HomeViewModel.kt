@@ -15,7 +15,9 @@ import com.samiuysal.fediversehub.core.performance.PerfLogger
 import com.samiuysal.fediversehub.feature.auth.domain.AccountStore
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostActionType
 import com.samiuysal.fediversehub.feature.lemmy.LemmyPostUiModel
+import com.samiuysal.fediversehub.feature.lemmy.community.LemmyPostComposeType
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyFeedType
+import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyPostPage
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyRepository
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmySortType
 import com.samiuysal.fediversehub.feature.lemmy.mapper.LemmyPostMapper
@@ -72,6 +74,12 @@ class HomeViewModel @Inject constructor(
     val replyComposeState: StateFlow<MastodonReplyComposeState?> = _replyComposeState.asStateFlow()
     private val _newPostComposeState = MutableStateFlow<MastodonNewPostComposeState?>(null)
     val newPostComposeState: StateFlow<MastodonNewPostComposeState?> = _newPostComposeState.asStateFlow()
+    private val _pixelfedPostComposerState = MutableStateFlow(PixelfedPostComposerUiState())
+    val pixelfedPostComposerState: StateFlow<PixelfedPostComposerUiState> =
+        _pixelfedPostComposerState.asStateFlow()
+    private val _lemmyPostComposerState = MutableStateFlow(LemmyHomePostComposerUiState())
+    val lemmyPostComposerState: StateFlow<LemmyHomePostComposerUiState> =
+        _lemmyPostComposerState.asStateFlow()
     private val _pixelfedActionOverrides = MutableStateFlow<Map<String, PixelfedPostUiModel>>(emptyMap())
     val pixelfedActionOverrides: StateFlow<Map<String, PixelfedPostUiModel>> =
         _pixelfedActionOverrides.asStateFlow()
@@ -288,6 +296,15 @@ class HomeViewModel @Inject constructor(
         _newPostComposeState.value = MastodonNewPostComposeState()
     }
 
+    fun openPlatformComposer(platform: PlatformType = _uiState.value.selectedPlatform) {
+        selectPlatform(platform)
+        when (platform) {
+            PlatformType.MASTODON -> openNewPostCompose()
+            PlatformType.PIXELFED -> openPixelfedPostComposer()
+            PlatformType.LEMMY -> openLemmyPostComposer()
+        }
+    }
+
     fun onNewPostTextChanged(text: String) {
         _newPostComposeState.update { state ->
             state?.copy(text = text, errorMessage = null)
@@ -353,8 +370,149 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun openPixelfedPostComposer() {
+        _pixelfedPostComposerState.value = PixelfedPostComposerUiState(isOpen = true)
+    }
+
+    fun dismissPixelfedPostComposer() {
+        if (_pixelfedPostComposerState.value.isSubmitting) return
+        _pixelfedPostComposerState.value = PixelfedPostComposerUiState()
+    }
+
+    fun onPixelfedPostTextChanged(text: String) {
+        _pixelfedPostComposerState.update { it.copy(text = text, errorMessage = null) }
+    }
+
+    fun submitPixelfedPost() {
+        val state = _pixelfedPostComposerState.value
+        val text = state.text.trim()
+        val account = _uiState.value.activeAccount(PlatformType.PIXELFED)
+        when {
+            account == null -> {
+                _pixelfedPostComposerState.value = state.copy(errorMessage = "Pixelfed hesabı gerekli.")
+                return
+            }
+            text.isBlank() -> {
+                _pixelfedPostComposerState.value = state.copy(errorMessage = "Gönderi boş olamaz.")
+                return
+            }
+        }
+        _pixelfedPostComposerState.value = state.copy(isSubmitting = true, errorMessage = null)
+        viewModelScope.launch {
+            when (val result = pixelfedRepository.createPost(account, text)) {
+                is AppResult.Success -> {
+                    _pixelfedPostComposerState.value = PixelfedPostComposerUiState()
+                }
+                is AppResult.Failure -> {
+                    _pixelfedPostComposerState.update {
+                        it.copy(isSubmitting = false, errorMessage = result.error.userMessage("Pixelfed gönderisi oluşturulamadı."))
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(HomeEffect.NavigateToProfile)
+                    }
+                }
+            }
+        }
+    }
+
+    fun openLemmyPostComposer() {
+        _lemmyPostComposerState.update { it.copy(isOpen = true, errorMessage = null) }
+        loadLemmyComposerCommunities()
+    }
+
+    fun dismissLemmyPostComposer() {
+        if (_lemmyPostComposerState.value.isSubmitting) return
+        _lemmyPostComposerState.value = LemmyHomePostComposerUiState()
+    }
+
+    fun onLemmyComposerTypeSelected(type: LemmyPostComposeType) {
+        _lemmyPostComposerState.update { it.copy(type = type, errorMessage = null) }
+    }
+
+    fun onLemmyComposerCommunitySelected(communityId: String) {
+        _lemmyPostComposerState.update { it.copy(selectedCommunityId = communityId, errorMessage = null) }
+    }
+
+    fun onLemmyComposerTitleChanged(value: String) {
+        _lemmyPostComposerState.update { it.copy(title = value, errorMessage = null) }
+    }
+
+    fun onLemmyComposerBodyChanged(value: String) {
+        _lemmyPostComposerState.update { it.copy(body = value, errorMessage = null) }
+    }
+
+    fun onLemmyComposerUrlChanged(value: String) {
+        _lemmyPostComposerState.update { it.copy(url = value, errorMessage = null) }
+    }
+
+    fun submitLemmyPost() {
+        val state = _lemmyPostComposerState.value
+        val account = _uiState.value.activeAccount(PlatformType.LEMMY)
+        val community = state.selectedCommunity
+        val title = state.title.trim()
+        when {
+            account == null -> {
+                _lemmyPostComposerState.value = state.copy(errorMessage = "Lemmy hesabı gerekli.")
+                return
+            }
+            community == null || community.id.isBlank() -> {
+                _lemmyPostComposerState.value = state.copy(errorMessage = "Topluluk seç.")
+                return
+            }
+            title.isBlank() -> {
+                _lemmyPostComposerState.value = state.copy(errorMessage = "Başlık zorunlu.")
+                return
+            }
+        }
+        _lemmyPostComposerState.value = state.copy(isSubmitting = true, errorMessage = null)
+        viewModelScope.launch {
+            when (
+                val result = lemmyRepository.createPost(
+                    account = account,
+                    communityId = community.id,
+                    title = title,
+                    body = state.body.trim().takeIf(String::isNotBlank),
+                    url = if (state.type == LemmyPostComposeType.LINK) {
+                        state.url.trim().takeIf(String::isNotBlank)
+                    } else {
+                        null
+                    },
+                )
+            ) {
+                is AppResult.Success -> {
+                    _lemmyPostComposerState.value = LemmyHomePostComposerUiState()
+                }
+                is AppResult.Failure -> {
+                    _lemmyPostComposerState.update {
+                        it.copy(isSubmitting = false, errorMessage = result.error.userMessage("Lemmy post oluşturulamadı."))
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(HomeEffect.NavigateToProfile)
+                    }
+                }
+            }
+        }
+    }
+
     fun selectPlatform(platform: PlatformType) {
         _uiState.update { it.copy(selectedPlatform = platform) }
+    }
+
+    fun selectPlatformAndAccount(platform: PlatformType, account: Account?) {
+        val previousState = _uiState.value
+        if (account != null && previousState.activeAccount(account.platform)?.id != account.id) {
+            clearPlatformTransientState(account.platform)
+        }
+        _uiState.update {
+            it.copy(
+                selectedPlatform = platform,
+                activeAccountIds = if (account != null) {
+                    it.activeAccountIds + (account.platform to account.id)
+                } else {
+                    it.activeAccountIds
+                },
+            )
+        }
     }
 
     fun selectAccount(account: Account?) {
@@ -466,6 +624,43 @@ class HomeViewModel @Inject constructor(
 
     fun dismissPixelfedComments() {
         _pixelfedCommentsState.value = null
+    }
+
+    private fun loadLemmyComposerCommunities() {
+        val account = _uiState.value.activeAccount(PlatformType.LEMMY)
+        if (account == null) {
+            _lemmyPostComposerState.update { it.copy(errorMessage = "Lemmy hesabı gerekli.") }
+            return
+        }
+        val current = _lemmyPostComposerState.value
+        if (current.communities.isNotEmpty() || current.isCommunitiesLoading) return
+        _lemmyPostComposerState.update { it.copy(isCommunitiesLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            when (val result = lemmyRepository.getCommunities(account, LemmyPostPage(limit = 50))) {
+                is AppResult.Success -> {
+                    val communities = result.data.map(LemmyPostMapper::communityToUi)
+                    _lemmyPostComposerState.update {
+                        it.copy(
+                            communities = communities,
+                            selectedCommunityId = it.selectedCommunityId ?: communities.firstOrNull()?.id,
+                            isCommunitiesLoading = false,
+                            errorMessage = if (communities.isEmpty()) "Topluluk bulunamadı." else null,
+                        )
+                    }
+                }
+                is AppResult.Failure -> {
+                    _lemmyPostComposerState.update {
+                        it.copy(
+                            isCommunitiesLoading = false,
+                            errorMessage = result.error.userMessage("Topluluklar yüklenemedi."),
+                        )
+                    }
+                    if (result.error is AppError.Unauthorized) {
+                        _effects.emit(HomeEffect.NavigateToProfile)
+                    }
+                }
+            }
+        }
     }
 
     private fun HomeUiState.activeAccount(platform: PlatformType): Account? {

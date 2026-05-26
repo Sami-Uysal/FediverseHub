@@ -74,9 +74,10 @@ class LemmyKtorApi @Inject constructor(
             parameter("page", page)
             parameter("limit", limit)
             communityName?.takeIf(String::isNotBlank)?.let { community ->
-                community.toIntOrNull()?.let { id ->
+                val query = community.normalizedCommunityQuery()
+                query.toIntOrNull()?.let { id ->
                     parameter("community_id", id)
-                } ?: parameter("community_name", community.removePrefix("c/"))
+                } ?: parameter("community_name", query)
             }
         }.body()
     }
@@ -189,9 +190,10 @@ class LemmyKtorApi @Inject constructor(
         val baseUrl = instanceUrl.normalizedHttpsBaseUrl()
         return httpClient.get("$baseUrl/api/v3/community") {
             withAuth(accessToken)
-            communityName.removePrefix("c/").toIntOrNull()?.let { id ->
+            val query = communityName.normalizedCommunityQuery()
+            query.toIntOrNull()?.let { id ->
                 parameter("id", id)
-            } ?: parameter("name", communityName.removePrefix("c/"))
+            } ?: parameter("name", query)
         }.body()
     }
 
@@ -340,5 +342,18 @@ class LemmyKtorApi @Inject constructor(
             trimmed.startsWith("http://") -> trimmed.replaceFirst("http://", "https://")
             else -> "https://$trimmed"
         }
+    }
+
+    private fun String.normalizedCommunityQuery(): String {
+        val trimmed = trim().removePrefix("c/").trimEnd('/')
+        val host = trimmed
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore("/")
+            .takeIf(String::isNotBlank)
+        val name = trimmed
+            .substringAfterLast("/c/", missingDelimiterValue = "")
+            .takeIf(String::isNotBlank)
+        return if (host != null && name != null) "$name@$host" else trimmed
     }
 }

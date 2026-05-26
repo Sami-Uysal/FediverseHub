@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Login
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,7 +52,9 @@ fun HomeRoute(
     contentPadding: PaddingValues,
     selectedPlatform: PlatformType,
     selectedAccount: Account?,
+    createPostRequestKey: Int,
     onPlatformSelected: (PlatformType) -> Unit,
+    onNotificationsClick: () -> Unit,
     onMastodonPostSelected: (String) -> Unit,
     onMastodonAccountSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit,
@@ -68,12 +73,16 @@ fun HomeRoute(
     val pixelfedCommentsState by viewModel.pixelfedCommentsState.collectAsStateWithLifecycle()
     val replyComposeState by viewModel.replyComposeState.collectAsStateWithLifecycle()
     val newPostComposeState by viewModel.newPostComposeState.collectAsStateWithLifecycle()
+    val pixelfedPostComposerState by viewModel.pixelfedPostComposerState.collectAsStateWithLifecycle()
+    val lemmyPostComposerState by viewModel.lemmyPostComposerState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(selectedPlatform) {
-        viewModel.selectPlatform(selectedPlatform)
+    LaunchedEffect(selectedPlatform, selectedAccount?.id) {
+        viewModel.selectPlatformAndAccount(selectedPlatform, selectedAccount)
     }
-    LaunchedEffect(selectedAccount?.id) {
-        viewModel.selectAccount(selectedAccount)
+    LaunchedEffect(createPostRequestKey) {
+        if (createPostRequestKey > 0) {
+            viewModel.openPlatformComposer(selectedPlatform)
+        }
     }
 
     LaunchedEffect(viewModel) {
@@ -85,10 +94,10 @@ fun HomeRoute(
     }
 
     HomeScreenContent(
-        uiState = uiState,
+        uiState = uiState.forSelectedPlatform(selectedPlatform, selectedAccount),
         contentPadding = contentPadding,
         onPlatformSelected = onPlatformSelected,
-        onComposerClick = viewModel::openNewPostCompose,
+        onNotificationsClick = onNotificationsClick,
         mastodonContent = { modifier ->
             if (uiState.selectedAccount?.accessToken.isNullOrBlank()) {
                 NoAccountHomeCta(
@@ -186,6 +195,28 @@ fun HomeRoute(
             onDismiss = viewModel::dismissPixelfedComments,
         )
     }
+
+    if (pixelfedPostComposerState.isOpen) {
+        PixelfedCreatePostSheet(
+            state = pixelfedPostComposerState,
+            onTextChanged = viewModel::onPixelfedPostTextChanged,
+            onDismiss = viewModel::dismissPixelfedPostComposer,
+            onSubmit = viewModel::submitPixelfedPost,
+        )
+    }
+
+    if (lemmyPostComposerState.isOpen) {
+        LemmyCreatePostSheet(
+            state = lemmyPostComposerState,
+            onCommunitySelected = viewModel::onLemmyComposerCommunitySelected,
+            onTypeSelected = viewModel::onLemmyComposerTypeSelected,
+            onTitleChanged = viewModel::onLemmyComposerTitleChanged,
+            onBodyChanged = viewModel::onLemmyComposerBodyChanged,
+            onUrlChanged = viewModel::onLemmyComposerUrlChanged,
+            onDismiss = viewModel::dismissLemmyPostComposer,
+            onSubmit = viewModel::submitLemmyPost,
+        )
+    }
 }
 
 @Composable
@@ -193,7 +224,7 @@ fun HomeScreenContent(
     uiState: HomeUiState,
     contentPadding: PaddingValues,
     onPlatformSelected: (PlatformType) -> Unit,
-    onComposerClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
     mastodonContent: @Composable (Modifier) -> Unit,
     lemmyContent: @Composable (Modifier) -> Unit,
     pixelfedContent: @Composable (Modifier) -> Unit,
@@ -207,11 +238,7 @@ fun HomeScreenContent(
         HomeTopBar(
             selectedPlatform = uiState.selectedPlatform,
             onPlatformSelected = onPlatformSelected,
-        )
-        HomeComposerPreview(
-            account = uiState.selectedAccount,
-            selectedPlatform = uiState.selectedPlatform,
-            onClick = onComposerClick,
+            onNotificationsClick = onNotificationsClick,
         )
         when (uiState.selectedPlatform) {
             PlatformType.MASTODON -> mastodonContent(Modifier.weight(1f))
@@ -258,6 +285,7 @@ private fun NoAccountHomeCta(
 fun HomeTopBar(
     selectedPlatform: PlatformType,
     onPlatformSelected: (PlatformType) -> Unit,
+    onNotificationsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -276,6 +304,16 @@ fun HomeTopBar(
                     onPlatformSelected = onPlatformSelected,
                     modifier = Modifier.align(Alignment.CenterStart),
                 )
+                IconButton(
+                    onClick = onNotificationsClick,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "Bildirimler",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.68f))
         }
@@ -335,6 +373,19 @@ private val PlatformType.label: String
         PlatformType.PIXELFED -> "Pixelfed"
     }
 
+private fun HomeUiState.forSelectedPlatform(
+    platform: PlatformType,
+    account: Account?,
+): HomeUiState =
+    copy(
+        selectedPlatform = platform,
+        activeAccountIds = if (account != null) {
+            activeAccountIds + (account.platform to account.id)
+        } else {
+            activeAccountIds
+        },
+    )
+
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun HomeScreenContentPreview() {
@@ -344,7 +395,7 @@ fun HomeScreenContentPreview() {
             uiState = state,
             contentPadding = PaddingValues(),
             onPlatformSelected = {},
-            onComposerClick = {},
+            onNotificationsClick = {},
             mastodonContent = { modifier ->
                 MastodonHomeScreenContent(
                     account = state.selectedAccount,
@@ -382,6 +433,7 @@ fun HomeTopComposerPreview() {
             HomeTopBar(
                 selectedPlatform = PlatformType.MASTODON,
                 onPlatformSelected = {},
+                onNotificationsClick = {},
             )
             HomeComposerPreview(
                 account = state.accounts.first { it.platform == PlatformType.MASTODON },

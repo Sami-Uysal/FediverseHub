@@ -4,15 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
-import com.samiuysal.fediversehub.core.designsystem.theme.AppRadius
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.designsystem.theme.PlatformColors
 import com.samiuysal.fediversehub.core.model.PlatformType
@@ -43,38 +38,23 @@ fun PlatformSwitcher(
     val interactionSource = remember { MutableInteractionSource() }
 
     androidx.compose.foundation.layout.Box(modifier = modifier) {
-        Surface(
+        Row(
             modifier = Modifier
-                .widthIn(min = 128.dp, max = 164.dp)
-                .height(38.dp)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = { expanded = true },
-                ),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f),
-            contentColor = selectedPlatform.accentColor,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.full),
+                )
+                .padding(horizontal = AppSpacing.xs, vertical = AppSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = AppSpacing.md),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = selectedPlatform.label,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = selectedPlatform.accentColor,
-                )
-                Icon(
-                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = "Select platform",
-                    modifier = Modifier.size(20.dp),
-                    tint = selectedPlatform.accentColor,
-                )
-            }
+            Text(
+                text = selectedPlatform.label,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = selectedPlatform.accentColor,
+            )
         }
         DropdownMenu(
             expanded = expanded,

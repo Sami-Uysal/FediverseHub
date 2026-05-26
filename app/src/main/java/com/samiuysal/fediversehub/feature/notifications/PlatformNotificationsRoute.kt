@@ -15,8 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PersonAdd
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,6 +36,7 @@ import com.samiuysal.fediversehub.core.designsystem.component.EmptyState
 import com.samiuysal.fediversehub.core.designsystem.theme.AppSpacing
 import com.samiuysal.fediversehub.core.model.Account
 import com.samiuysal.fediversehub.core.model.PlatformType
+import com.samiuysal.fediversehub.feature.home.PlatformSwitcher
 import com.samiuysal.fediversehub.feature.lemmy.domain.LemmyNotificationType
 import com.samiuysal.fediversehub.feature.mastodon.notifications.MastodonNotificationsRoute
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedNotificationType
@@ -45,6 +46,7 @@ fun PlatformNotificationsRoute(
     selectedPlatform: PlatformType,
     selectedAccount: Account?,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     onProfileSelected: (String) -> Unit,
     onPixelfedPostSelected: (String) -> Unit = {},
@@ -52,20 +54,26 @@ fun PlatformNotificationsRoute(
 ) {
     when (selectedPlatform) {
         PlatformType.MASTODON -> MastodonNotificationsRoute(
+            selectedPlatform = selectedPlatform,
             selectedAccount = selectedAccount,
             contentPadding = contentPadding,
+            onPlatformSelected = onPlatformSelected,
             onPostSelected = onPostSelected,
             onProfileSelected = onProfileSelected,
         )
         PlatformType.PIXELFED -> PixelfedNotificationsRoute(
+            selectedPlatform = selectedPlatform,
             selectedAccount = selectedAccount,
             contentPadding = contentPadding,
+            onPlatformSelected = onPlatformSelected,
             onPostSelected = onPixelfedPostSelected,
             onProfileSelected = onProfileSelected,
         )
         PlatformType.LEMMY -> LemmyNotificationsRoute(
+            selectedPlatform = selectedPlatform,
             selectedAccount = selectedAccount,
             contentPadding = contentPadding,
+            onPlatformSelected = onPlatformSelected,
             onPostSelected = onLemmyPostSelected,
         )
     }
@@ -73,8 +81,10 @@ fun PlatformNotificationsRoute(
 
 @Composable
 private fun PixelfedNotificationsRoute(
+    selectedPlatform: PlatformType,
     selectedAccount: Account?,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     onProfileSelected: (String) -> Unit,
     viewModel: PixelfedNotificationsViewModel = hiltViewModel(),
@@ -83,7 +93,11 @@ private fun PixelfedNotificationsRoute(
     LaunchedEffect(selectedAccount?.id) {
         viewModel.selectAccount(selectedAccount)
     }
-    NotificationContainer(contentPadding = contentPadding) {
+    NotificationContainer(
+        selectedPlatform = selectedPlatform,
+        contentPadding = contentPadding,
+        onPlatformSelected = onPlatformSelected,
+    ) {
         when (val uiState = state) {
             PlatformNotificationUiState.NoAccount -> EmptyState(
                 title = "Pixelfed hesabı gerekli",
@@ -115,8 +129,10 @@ private fun PixelfedNotificationsRoute(
 
 @Composable
 private fun LemmyNotificationsRoute(
+    selectedPlatform: PlatformType,
     selectedAccount: Account?,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     viewModel: LemmyNotificationsViewModel = hiltViewModel(),
 ) {
@@ -125,7 +141,11 @@ private fun LemmyNotificationsRoute(
     LaunchedEffect(selectedAccount?.id) {
         viewModel.selectAccount(selectedAccount)
     }
-    NotificationContainer(contentPadding = contentPadding) {
+    NotificationContainer(
+        selectedPlatform = selectedPlatform,
+        contentPadding = contentPadding,
+        onPlatformSelected = onPlatformSelected,
+    ) {
         LemmyNotificationTabs(selectedTab = selectedTab, onSelected = viewModel::selectTab)
         when (val uiState = state) {
             PlatformNotificationUiState.NoAccount -> EmptyState(
@@ -153,15 +173,59 @@ private fun LemmyNotificationsRoute(
 
 @Composable
 private fun NotificationContainer(
+    selectedPlatform: PlatformType,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        content = content,
-    )
+    ) {
+        NotificationTopBar(
+            selectedPlatform = selectedPlatform,
+            onPlatformSelected = onPlatformSelected,
+        )
+        content()
+    }
+}
+
+@Composable
+private fun NotificationTopBar(
+    selectedPlatform: PlatformType,
+    onPlatformSelected: (PlatformType) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PlatformSwitcher(
+                selectedPlatform = selectedPlatform,
+                onPlatformSelected = onPlatformSelected,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "Bildirimler",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.68f))
+    }
 }
 
 @Composable

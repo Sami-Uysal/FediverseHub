@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import com.samiuysal.fediversehub.core.designsystem.component.AppBottomNavItem
@@ -41,7 +40,6 @@ object AppDestination {
         AppBottomNavItem(HOME, "Home", Icons.Outlined.Home),
         AppBottomNavItem(SEARCH, "Search", Icons.Outlined.Search),
         AppBottomNavItem(EXPLORE, "Keşfet", Icons.Outlined.Explore),
-        AppBottomNavItem(NOTIFICATIONS, "Notifications", Icons.Outlined.Notifications),
         AppBottomNavItem(PROFILE, "Profile", Icons.Outlined.Person),
     )
 

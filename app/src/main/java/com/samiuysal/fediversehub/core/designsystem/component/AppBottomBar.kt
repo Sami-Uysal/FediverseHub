@@ -18,7 +18,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -30,9 +29,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import com.samiuysal.fediversehub.core.designsystem.theme.FediverseHubTheme
@@ -52,6 +51,7 @@ fun AppBottomBar(
     accentColor: Color = MaterialTheme.colorScheme.primary,
     profileAvatarUrl: String? = null,
     profileName: String = "Profile",
+    onCreateClick: () -> Unit = {},
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
@@ -71,7 +71,14 @@ fun AppBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                items.forEach { item ->
+                items.forEachIndexed { index, item ->
+                    if (index == items.size / 2) {
+                        CreateBottomBarItem(
+                            accentColor = accentColor,
+                            onClick = onCreateClick,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                     BottomBarItem(
                         item = item,
                         selected = selectedRoute == item.route,
@@ -83,6 +90,44 @@ fun AppBottomBar(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CreateBottomBarItem(
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(stiffness = 520f, dampingRatio = 0.72f),
+        label = "bottomCreateScale",
+    )
+    Box(
+        modifier = modifier
+            .height(46.dp)
+            .scale(scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            color = accentColor,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = RoundedCornerShape(18.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = "Yeni gönderi",
+                modifier = Modifier.padding(AppSpacing.sm),
+            )
         }
     }
 }
@@ -154,7 +199,6 @@ fun AppBottomBarPreview() {
                 AppBottomNavItem("home", "Home", Icons.Outlined.Home),
                 AppBottomNavItem("search", "Search", Icons.Outlined.Search),
                 AppBottomNavItem("discover", "Discover", Icons.Outlined.Explore),
-                AppBottomNavItem("notifications", "Notifications", Icons.Outlined.Notifications),
                 AppBottomNavItem("profile", "Profile", Icons.Outlined.Person),
             ),
             selectedRoute = "home",

@@ -7,11 +7,14 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.samiuysal.fediversehub.core.model.Account
+import com.samiuysal.fediversehub.core.model.PlatformType
 
 @Composable
 fun MastodonNotificationsRoute(
+    selectedPlatform: PlatformType,
     selectedAccount: Account?,
     contentPadding: PaddingValues,
+    onPlatformSelected: (PlatformType) -> Unit,
     onPostSelected: (String) -> Unit,
     onProfileSelected: (String) -> Unit,
     viewModel: MastodonNotificationsViewModel = hiltViewModel(),
@@ -20,7 +23,9 @@ fun MastodonNotificationsRoute(
         viewModel.selectAccount(selectedAccount)
     }
     MastodonNotificationsScreen(
+        selectedPlatform = selectedPlatform,
         notifications = viewModel.notifications.collectAsLazyPagingItems(),
+        onPlatformSelected = onPlatformSelected,
         onPostSelected = onPostSelected,
         onProfileSelected = onProfileSelected,
         modifier = Modifier.padding(contentPadding),

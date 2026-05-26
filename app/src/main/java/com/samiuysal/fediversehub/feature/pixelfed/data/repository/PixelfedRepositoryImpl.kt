@@ -252,6 +252,26 @@ class PixelfedRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun createPost(account: Account, text: String): AppResult<PixelfedPost> {
+        val accessToken = account.accessToken
+            ?: return AppResult.Failure(AppError.Unauthorized)
+
+        return try {
+            val status = pixelfedApi.createStatus(
+                instanceUrl = account.instanceUrl,
+                accessToken = accessToken,
+                text = text,
+            )
+            val post = withContext(Dispatchers.Default) {
+                PixelfedMapper.statusToDomain(status)
+            }
+            memoryCache.put(account.cacheKey("post", post.id), post)
+            AppResult.Success(post)
+        } catch (throwable: Throwable) {
+            AppResult.Failure(NetworkErrorMapper.map(throwable))
+        }
+    }
+
     override suspend fun setLiked(
         account: Account,
         postId: String,

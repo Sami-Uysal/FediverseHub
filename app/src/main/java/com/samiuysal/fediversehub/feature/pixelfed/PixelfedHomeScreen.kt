@@ -33,7 +33,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +74,7 @@ import com.samiuysal.fediversehub.core.model.PlatformType
 import com.samiuysal.fediversehub.feature.home.MockFediverseData
 import com.samiuysal.fediversehub.feature.pixelfed.domain.PixelfedComment
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PixelfedHomeScreen(
     account: Account?,
@@ -85,6 +88,11 @@ fun PixelfedHomeScreen(
     onLikeClick: (PixelfedPostUiModel) -> Unit,
     onCommentsClick: (PixelfedPostUiModel) -> Unit,
 ) {
+    val isRefreshing by remember(posts) {
+        derivedStateOf {
+            posts.loadState.refresh is LoadState.Loading && posts.itemCount > 0
+        }
+    }
     Column(modifier = modifier) {
         if (showTopBar) {
             AppTopBar(
@@ -99,65 +107,71 @@ fun PixelfedHomeScreen(
                 },
             )
         }
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(bottom = AppSpacing.xl),
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = posts::refresh,
+            modifier = Modifier.weight(1f),
         ) {
-            when {
-                posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> {
-                    item(key = "pixelfed-loading", contentType = "pixelfed-loading") {
-                        PixelfedFeedSkeleton()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = AppSpacing.xl),
+            ) {
+                when {
+                    posts.loadState.refresh is LoadState.Loading && posts.itemCount == 0 -> {
+                        item(key = "pixelfed-loading", contentType = "pixelfed-loading") {
+                            PixelfedFeedSkeleton()
+                        }
+                    }
+                    posts.loadState.refresh is LoadState.Error && posts.itemCount == 0 -> {
+                        val error = posts.loadState.refresh as LoadState.Error
+                        item(key = "pixelfed-error", contentType = "pixelfed-error") {
+                            AppErrorState(
+                                message = error.error.userFacingMessage("Pixelfed feed yüklenemedi."),
+                                onRetry = posts::retry,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp),
+                            )
+                        }
+                    }
+                    posts.itemCount == 0 -> {
+                        item(key = "pixelfed-empty", contentType = "pixelfed-empty") {
+                            EmptyState(
+                                title = "No photos yet",
+                                message = "Your Pixelfed home feed will appear here.",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp),
+                            )
+                        }
                     }
                 }
-                posts.loadState.refresh is LoadState.Error && posts.itemCount == 0 -> {
-                    val error = posts.loadState.refresh as LoadState.Error
-                    item(key = "pixelfed-error", contentType = "pixelfed-error") {
-                        AppErrorState(
-                            message = error.error.userFacingMessage("Pixelfed feed yüklenemedi."),
-                            onRetry = posts::retry,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp),
+                items(
+                    count = posts.itemCount,
+                    key = posts.itemKey { it.id },
+                    contentType = posts.itemContentType { "pixelfed-post" },
+                ) { index ->
+                    posts[index]?.let { post ->
+                        val visiblePost = actionOverrides[post.id] ?: post
+                        PixelfedPostCard(
+                            post = visiblePost,
+                            onClick = { onPostClick(visiblePost.id) },
+                            onAuthorClick = { onAuthorClick(visiblePost.authorAccountId) },
+                            onMediaClick = onMediaClick,
+                            onLikeClick = onLikeClick,
+                            onCommentsClick = onCommentsClick,
                         )
                     }
                 }
-                posts.itemCount == 0 -> {
-                    item(key = "pixelfed-empty", contentType = "pixelfed-empty") {
-                        EmptyState(
-                            title = "No photos yet",
-                            message = "Your Pixelfed home feed will appear here.",
+                if (posts.loadState.append is LoadState.Loading) {
+                    item(key = "pixelfed-append-loading", contentType = "pixelfed-append-loading") {
+                        AppLoading(
+                            message = "Loading more...",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(220.dp),
+                                .height(96.dp),
                         )
                     }
-                }
-            }
-            items(
-                count = posts.itemCount,
-                key = posts.itemKey { it.id },
-                contentType = posts.itemContentType { "pixelfed-post" },
-            ) { index ->
-                posts[index]?.let { post ->
-                    val visiblePost = actionOverrides[post.id] ?: post
-                    PixelfedPostCard(
-                        post = visiblePost,
-                        onClick = { onPostClick(visiblePost.id) },
-                        onAuthorClick = { onAuthorClick(visiblePost.authorAccountId) },
-                        onMediaClick = onMediaClick,
-                        onLikeClick = onLikeClick,
-                        onCommentsClick = onCommentsClick,
-                    )
-                }
-            }
-            if (posts.loadState.append is LoadState.Loading) {
-                item(key = "pixelfed-append-loading", contentType = "pixelfed-append-loading") {
-                    AppLoading(
-                        message = "Loading more...",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(96.dp),
-                    )
                 }
             }
         }
